@@ -4,6 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "ts-node index.ts",
+    "build": "tsc",
+    "start": "node --experimental-specifier-resolution=node dist/index.js",
+    "start:prod": "ts-node index.ts",
     "scan-duplicates": "ts-node scan-duplicates.ts"
   },
   "dependencies": {
