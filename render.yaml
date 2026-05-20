@@ -1,0 +1,25 @@
+services:
+  # The Node.js Web Socket Server
+  - type: web
+    name: ipl-auction-server
+    env: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # The Vite React Frontend
+  - type: web
+    name: ipl-auction-client
+    env: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_SERVER_URL
+        fromService:
+          type: web
+          name: ipl-auction-server
+          envVarKey: RENDER_EXTERNAL_URL
