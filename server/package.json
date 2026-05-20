@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "ts-node index.ts",
-    "build": "echo 'No build step required for server (using ts-node)'",
+    "build": "echo done",
     "start": "ts-node index.ts",
     "scan-duplicates": "ts-node scan-duplicates.ts"
   },
