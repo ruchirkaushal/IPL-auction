@@ -4,8 +4,8 @@ services:
     name: ipl-auction-server
     env: node
     rootDir: server
-    buildCommand: npm install && npm run build
-    startCommand: npm run start:prod
+    buildCommand: npm install
+    startCommand: npx ts-node index.ts
     envVars:
       - key: NODE_ENV
         value: production
