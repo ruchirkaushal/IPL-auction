@@ -1,0 +1,324 @@
+[
+  {
+    "id": "csk-2",
+    "name": "Dewald Brevis",
+    "country": "South Africa",
+    "role": "BAT",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/797.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "csk-8",
+    "name": "Ayush Mhatre",
+    "country": "India",
+    "role": "BAT",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/3497.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "csk-9",
+    "name": "Urvil Patel",
+    "country": "India",
+    "role": "WK",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/1486.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "dc-5",
+    "name": "Sediqullah Atal",
+    "country": "Afghanistan",
+    "role": "BAT",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "starRating": 1,
+    "metadataCompleteness": 92,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate with less complete metadata"
+    ]
+  },
+  {
+    "id": "dc-23",
+    "name": "Mustafizur Rahman",
+    "country": "Bangladesh",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/258.png",
+    "starRating": 3,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "gt-5",
+    "name": "Kusal Mendis",
+    "country": "Sri Lanka",
+    "role": "BAT",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/276.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "gt-16",
+    "name": "Dasun Shanaka",
+    "country": "Sri Lanka",
+    "role": "AR",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/375.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "kkr-18",
+    "name": "Shivam Shukla",
+    "country": "India",
+    "role": "BOWL",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "starRating": 1,
+    "metadataCompleteness": 92,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate with less complete metadata"
+    ]
+  },
+  {
+    "id": "kkr-21",
+    "name": "Chetan Sakariya",
+    "country": "India",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/592.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "lsg-15",
+    "name": "Shardul Thakur",
+    "country": "India",
+    "role": "AR",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/105.png",
+    "starRating": 3,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "lsg-17",
+    "name": "Akash Singh",
+    "country": "India",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/535.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "lsg-23",
+    "name": "William O'Rourke",
+    "country": "New Zealand",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/3398.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "mi-6",
+    "name": "Jonny Bairstow",
+    "country": "England",
+    "role": "WK",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/216.png",
+    "starRating": 3,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "mi-21",
+    "name": "Charith Asalanka",
+    "country": "Sri Lanka",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/605.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "mi-22",
+    "name": "Richard Gleeson",
+    "country": "England",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/1219.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "pbks-25",
+    "name": "Kyle Jamieson",
+    "country": "New Zealand",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/382.png",
+    "starRating": 2,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "rr-20",
+    "name": "Nandre Burger",
+    "country": "South Africa",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/2806.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "rcb-6",
+    "name": "Tim Seifert",
+    "country": "New Zealand",
+    "role": "WK",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/82.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "rcb-14",
+    "name": "Blessing Muzarabani",
+    "country": "Zimbabwe",
+    "role": "BOWL",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/827.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "srh-6",
+    "name": "Smaran Ravichandran",
+    "country": "India",
+    "role": "BAT",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/3752.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "srh-11",
+    "name": "Wiaan Mulder",
+    "country": "South Africa",
+    "role": "AR",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/630.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "srh-12",
+    "name": "Harsh Dubey",
+    "country": "India",
+    "role": "AR",
+    "hasImage": true,
+    "imageUrl": "https://documents.iplt20.com/ipl/IPLHeadshot2025/1494.png",
+    "starRating": 1,
+    "metadataCompleteness": 100,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate without image (canonical has image)"
+    ]
+  },
+  {
+    "id": "unsold-233",
+    "name": "Himanshu Singh",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "starRating": 1,
+    "metadataCompleteness": 83,
+    "duplicatesRemoved": 1,
+    "removalReasons": [
+      "Duplicate entry (first instance kept)"
+    ]
+  }
+]

@@ -1,0 +1,179 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║              IPL PLAYER INTELLIGENT DEDUPLICATION REPORT                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📊 DEDUPLICATION SUMMARY
+─────────────────────────────────────────────────────────────────────────────
+Total Players (Before):      627
+Unique Players (After):      604
+Duplicate Groups Found:      23
+Total Duplicates Removed:    23
+Players Cleaned:             23
+Report Generated:            5/19/2026, 9:56:51 AM
+
+✅ KEPT ENTRIES (Canonical)
+─────────────────────────────────────────────────────────────────────────────
+1. "Dewald Brevis" (South Africa)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BAT, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Dewald Brevis" (Reason: Duplicate without image (canonical has image))
+
+2. "Ayush Mhatre" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BAT, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Ayush Mhatre" (Reason: Duplicate without image (canonical has image))
+
+3. "Urvil Patel" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: WK, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Urvil Patel" (Reason: Duplicate without image (canonical has image))
+
+4. "Sediqullah Atal" (Afghanistan)
+   ❌ Image: No
+   📊 Metadata Completeness: 92%
+   🏏 Role: BAT, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Sediqullah Atal" (Reason: Duplicate with less complete metadata)
+
+5. "Mustafizur Rahman" (Bangladesh)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 3
+   🗑️  Removed 1 duplicate(s):
+       - "Mustafizur Rahman" (Reason: Duplicate without image (canonical has image))
+
+6. "Kusal Mendis" (Sri Lanka)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BAT, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Kusal Mendis" (Reason: Duplicate without image (canonical has image))
+
+7. "Dasun Shanaka" (Sri Lanka)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: AR, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Dasun Shanaka" (Reason: Duplicate without image (canonical has image))
+
+8. "Shivam Shukla" (India)
+   ❌ Image: No
+   📊 Metadata Completeness: 92%
+   🏏 Role: BOWL, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Shivam Shukla" (Reason: Duplicate with less complete metadata)
+
+9. "Chetan Sakariya" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Chetan Sakariya" (Reason: Duplicate without image (canonical has image))
+
+10. "Shardul Thakur" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: AR, ⭐ Rating: 3
+   🗑️  Removed 1 duplicate(s):
+       - "Shardul Thakur" (Reason: Duplicate without image (canonical has image))
+
+11. "Akash Singh" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Akash Singh" (Reason: Duplicate without image (canonical has image))
+
+12. "William O'Rourke" (New Zealand)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "William O'Rourke" (Reason: Duplicate without image (canonical has image))
+
+13. "Jonny Bairstow" (England)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: WK, ⭐ Rating: 3
+   🗑️  Removed 1 duplicate(s):
+       - "Jonny Bairstow" (Reason: Duplicate without image (canonical has image))
+
+14. "Charith Asalanka" (Sri Lanka)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Charith Asalanka" (Reason: Duplicate without image (canonical has image))
+
+15. "Richard Gleeson" (England)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Richard Gleeson" (Reason: Duplicate without image (canonical has image))
+
+16. "Kyle Jamieson" (New Zealand)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 2
+   🗑️  Removed 1 duplicate(s):
+       - "Kyle Jamieson" (Reason: Duplicate without image (canonical has image))
+
+17. "Nandre Burger" (South Africa)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Nandre Burger" (Reason: Duplicate without image (canonical has image))
+
+18. "Tim Seifert" (New Zealand)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: WK, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Tim Seifert" (Reason: Duplicate without image (canonical has image))
+
+19. "Blessing Muzarabani" (Zimbabwe)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BOWL, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Blessing Muzarabani" (Reason: Duplicate without image (canonical has image))
+
+20. "Smaran Ravichandran" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: BAT, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Smaran Ravichandran" (Reason: Duplicate without image (canonical has image))
+
+21. "Wiaan Mulder" (South Africa)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: AR, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Wiaan Mulder" (Reason: Duplicate without image (canonical has image))
+
+22. "Harsh Dubey" (India)
+   🖼️ Image: Yes
+   📊 Metadata Completeness: 100%
+   🏏 Role: AR, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Harsh Dubey" (Reason: Duplicate without image (canonical has image))
+
+23. "Himanshu Singh" (India)
+   ❌ Image: No
+   📊 Metadata Completeness: 83%
+   🏏 Role: AR, ⭐ Rating: 1
+   🗑️  Removed 1 duplicate(s):
+       - "Himanshu Singh" (Reason: Duplicate entry (first instance kept))
+
+─────────────────────────────────────────────────────────────────────────────
+✨ Deduplication Complete
+

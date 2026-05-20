@@ -1,0 +1,93 @@
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    IPL PLAYER DATABASE DUPLICATE REPORT                    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📊 SUMMARY
+─────────────────────────────────────────────────────────────────────────────
+Total Players:           627
+Unique Players:          604
+Duplicate Entries:       23
+Exact Duplicates Found:  23
+Fuzzy Duplicates Found:  0
+Report Generated:        5/18/2026, 11:59:51 PM
+
+
+🔴 EXACT DUPLICATES (Same normalized name)
+─────────────────────────────────────────────────────────────────────────────
+
+  "dewald brevis" - 2 entries:
+    1. "Dewald Brevis" (indices: 1, 310)
+
+  "ayush mhatre" - 2 entries:
+    1. "Ayush Mhatre" (indices: 7, 467)
+
+  "urvil patel" - 2 entries:
+    1. "Urvil Patel" (indices: 8, 423)
+
+  "sediqullah atal" - 2 entries:
+    1. "Sediqullah Atal" (indices: 30, 320)
+
+  "mustafizur rahman" - 2 entries:
+    1. "Mustafizur Rahman" (indices: 48, 244)
+
+  "kusal mendis" - 2 entries:
+    1. "Kusal Mendis" (indices: 53, 312)
+
+  "dasun shanaka" - 2 entries:
+    1. "Dasun Shanaka" (indices: 64, 358)
+
+  "shivam shukla" - 2 entries:
+    1. "Shivam Shukla" (indices: 92, 492)
+
+  "chetan sakariya" - 2 entries:
+    1. "Chetan Sakariya" (indices: 95, 348)
+
+  "shardul thakur" - 2 entries:
+    1. "Shardul Thakur" (indices: 110, 236)
+
+  "akash singh" - 2 entries:
+    1. "Akash Singh" (indices: 112, 480)
+
+  "william o'rourke" - 2 entries:
+    1. "William O'Rourke" (indices: 118, 269)
+
+  "jonny bairstow" - 2 entries:
+    1. "Jonny Bairstow" (indices: 125, 233)
+
+  "charith asalanka" - 2 entries:
+    1. "Charith Asalanka" (indices: 140, 342)
+
+  "richard gleeson" - 2 entries:
+    1. "Richard Gleeson" (indices: 141, 329)
+
+  "kyle jamieson" - 2 entries:
+    1. "Kyle Jamieson" (indices: 167, 277)
+
+  "nandre burger" - 2 entries:
+    1. "Nandre Burger" (indices: 187, 281)
+
+  "tim seifert" - 2 entries:
+    1. "Tim Seifert" (indices: 193, 280)
+
+  "blessing muzarabani" - 2 entries:
+    1. "Blessing Muzarabani" (indices: 201, 360)
+
+  "smaran ravichandran" - 2 entries:
+    1. "Smaran Ravichandran" (indices: 216, 411)
+
+  "wiaan mulder" - 2 entries:
+    1. "Wiaan Mulder" (indices: 221, 356)
+
+  "harsh dubey" - 2 entries:
+    1. "Harsh Dubey" (indices: 222, 528)
+
+  "himanshu singh" - 2 entries:
+    1. "Himanshu Singh" (indices: 464, 493)
+
+✅ POSSIBLE DUPLICATES
+   No fuzzy duplicates found!
+
+
+─────────────────────────────────────────────────────────────────────────────
+End of Report

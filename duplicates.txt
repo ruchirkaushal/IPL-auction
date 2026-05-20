@@ -1,0 +1,27 @@
+=== Duplicate IDs ===
+None.
+
+=== Duplicate Names ===
+Name "Dewald Brevis" appears 2 times. IDs: csk-2, unsold-79
+Name "Ayush Mhatre" appears 2 times. IDs: csk-8, unsold-236
+Name "Urvil Patel" appears 2 times. IDs: csk-9, unsold-192
+Name "Sediqullah Atal" appears 2 times. IDs: dc-5, unsold-89
+Name "Mustafizur Rahman" appears 2 times. IDs: dc-23, unsold-13
+Name "Kusal Mendis" appears 2 times. IDs: gt-5, unsold-81
+Name "Dasun Shanaka" appears 2 times. IDs: gt-16, unsold-127
+Name "Shivam Shukla" appears 2 times. IDs: kkr-18, unsold-261
+Name "Chetan Sakariya" appears 2 times. IDs: kkr-21, unsold-117
+Name "Shardul Thakur" appears 2 times. IDs: lsg-15, unsold-5
+Name "Akash Singh" appears 2 times. IDs: lsg-17, unsold-249
+Name "William O'Rourke" appears 2 times. IDs: lsg-23, unsold-38
+Name "Jonny Bairstow" appears 2 times. IDs: mi-6, unsold-2
+Name "Charith Asalanka" appears 2 times. IDs: mi-21, unsold-111
+Name "Richard Gleeson" appears 2 times. IDs: mi-22, unsold-98
+Name "Kyle Jamieson" appears 2 times. IDs: pbks-25, unsold-46
+Name "Nandre Burger" appears 2 times. IDs: rr-20, unsold-50
+Name "Tim Seifert" appears 2 times. IDs: rcb-6, unsold-49
+Name "Blessing Muzarabani" appears 2 times. IDs: rcb-14, unsold-129
+Name "Smaran Ravichandran" appears 2 times. IDs: srh-6, unsold-180
+Name "Wiaan Mulder" appears 2 times. IDs: srh-11, unsold-125
+Name "Harsh Dubey" appears 2 times. IDs: srh-12, unsold-297
+Name "Himanshu Singh" appears 2 times. IDs: unsold-233, unsold-262

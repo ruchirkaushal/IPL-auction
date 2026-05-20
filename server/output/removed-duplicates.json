@@ -1,0 +1,232 @@
+[
+  {
+    "id": "unsold-79",
+    "name": "Dewald Brevis",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Dewald Brevis"
+  },
+  {
+    "id": "unsold-236",
+    "name": "Ayush Mhatre",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Ayush Mhatre"
+  },
+  {
+    "id": "unsold-192",
+    "name": "Urvil Patel",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Urvil Patel"
+  },
+  {
+    "id": "unsold-89",
+    "name": "Sediqullah Atal",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate with less complete metadata",
+    "keptInsteadOf": "Sediqullah Atal"
+  },
+  {
+    "id": "unsold-13",
+    "name": "Mustafizur Rahman",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Mustafizur Rahman"
+  },
+  {
+    "id": "unsold-81",
+    "name": "Kusal Mendis",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Kusal Mendis"
+  },
+  {
+    "id": "unsold-127",
+    "name": "Dasun Shanaka",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Dasun Shanaka"
+  },
+  {
+    "id": "unsold-261",
+    "name": "Shivam Shukla",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate with less complete metadata",
+    "keptInsteadOf": "Shivam Shukla"
+  },
+  {
+    "id": "unsold-117",
+    "name": "Chetan Sakariya",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Chetan Sakariya"
+  },
+  {
+    "id": "unsold-5",
+    "name": "Shardul Thakur",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Shardul Thakur"
+  },
+  {
+    "id": "unsold-249",
+    "name": "Akash Singh",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Akash Singh"
+  },
+  {
+    "id": "unsold-38",
+    "name": "William O'Rourke",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "William O'Rourke"
+  },
+  {
+    "id": "unsold-2",
+    "name": "Jonny Bairstow",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Jonny Bairstow"
+  },
+  {
+    "id": "unsold-111",
+    "name": "Charith Asalanka",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Charith Asalanka"
+  },
+  {
+    "id": "unsold-98",
+    "name": "Richard Gleeson",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Richard Gleeson"
+  },
+  {
+    "id": "unsold-46",
+    "name": "Kyle Jamieson",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Kyle Jamieson"
+  },
+  {
+    "id": "unsold-50",
+    "name": "Nandre Burger",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Nandre Burger"
+  },
+  {
+    "id": "unsold-49",
+    "name": "Tim Seifert",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Tim Seifert"
+  },
+  {
+    "id": "unsold-129",
+    "name": "Blessing Muzarabani",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Blessing Muzarabani"
+  },
+  {
+    "id": "unsold-180",
+    "name": "Smaran Ravichandran",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Smaran Ravichandran"
+  },
+  {
+    "id": "unsold-125",
+    "name": "Wiaan Mulder",
+    "country": "Overseas",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Wiaan Mulder"
+  },
+  {
+    "id": "unsold-297",
+    "name": "Harsh Dubey",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate without image (canonical has image)",
+    "keptInsteadOf": "Harsh Dubey"
+  },
+  {
+    "id": "unsold-262",
+    "name": "Himanshu Singh",
+    "country": "India",
+    "role": "AR",
+    "hasImage": false,
+    "imageUrl": "https://documents.iplt20.com/ipl/assets/images/Default-Men.png",
+    "reason": "Duplicate entry (first instance kept)",
+    "keptInsteadOf": "Himanshu Singh"
+  }
+]

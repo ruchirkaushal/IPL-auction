@@ -1,0 +1,18 @@
+{
+  "deduplicationDate": "2026-05-19T04:26:51.824Z",
+  "statistics": {
+    "totalPlayersProcessed": 627,
+    "uniquePlayersRetained": 604,
+    "duplicateGroupsFound": 23,
+    "totalEntriesRemoved": 23,
+    "removalPercentage": "3.67%"
+  },
+  "deduplicationCriteria": {
+    "priority1": "Keep entries with valid images",
+    "priority2": "Keep entries with more complete metadata",
+    "priority3": "Keep first instance on tie",
+    "imageValidation": "URL-based, excludes defaults and placeholders"
+  },
+  "backupCreated": true,
+  "backupLocation": "report.backup (in output)"
+}
