@@ -1,260 +1,6 @@
 {
-  "exactDuplicates": [
-    {
-      "originalNames": [
-        "Dewald Brevis"
-      ],
-      "normalizedName": "dewald brevis",
-      "count": 2,
-      "indices": [
-        1,
-        310
-      ]
-    },
-    {
-      "originalNames": [
-        "Ayush Mhatre"
-      ],
-      "normalizedName": "ayush mhatre",
-      "count": 2,
-      "indices": [
-        7,
-        467
-      ]
-    },
-    {
-      "originalNames": [
-        "Urvil Patel"
-      ],
-      "normalizedName": "urvil patel",
-      "count": 2,
-      "indices": [
-        8,
-        423
-      ]
-    },
-    {
-      "originalNames": [
-        "Sediqullah Atal"
-      ],
-      "normalizedName": "sediqullah atal",
-      "count": 2,
-      "indices": [
-        30,
-        320
-      ]
-    },
-    {
-      "originalNames": [
-        "Mustafizur Rahman"
-      ],
-      "normalizedName": "mustafizur rahman",
-      "count": 2,
-      "indices": [
-        48,
-        244
-      ]
-    },
-    {
-      "originalNames": [
-        "Kusal Mendis"
-      ],
-      "normalizedName": "kusal mendis",
-      "count": 2,
-      "indices": [
-        53,
-        312
-      ]
-    },
-    {
-      "originalNames": [
-        "Dasun Shanaka"
-      ],
-      "normalizedName": "dasun shanaka",
-      "count": 2,
-      "indices": [
-        64,
-        358
-      ]
-    },
-    {
-      "originalNames": [
-        "Shivam Shukla"
-      ],
-      "normalizedName": "shivam shukla",
-      "count": 2,
-      "indices": [
-        92,
-        492
-      ]
-    },
-    {
-      "originalNames": [
-        "Chetan Sakariya"
-      ],
-      "normalizedName": "chetan sakariya",
-      "count": 2,
-      "indices": [
-        95,
-        348
-      ]
-    },
-    {
-      "originalNames": [
-        "Shardul Thakur"
-      ],
-      "normalizedName": "shardul thakur",
-      "count": 2,
-      "indices": [
-        110,
-        236
-      ]
-    },
-    {
-      "originalNames": [
-        "Akash Singh"
-      ],
-      "normalizedName": "akash singh",
-      "count": 2,
-      "indices": [
-        112,
-        480
-      ]
-    },
-    {
-      "originalNames": [
-        "William O'Rourke"
-      ],
-      "normalizedName": "william o'rourke",
-      "count": 2,
-      "indices": [
-        118,
-        269
-      ]
-    },
-    {
-      "originalNames": [
-        "Jonny Bairstow"
-      ],
-      "normalizedName": "jonny bairstow",
-      "count": 2,
-      "indices": [
-        125,
-        233
-      ]
-    },
-    {
-      "originalNames": [
-        "Charith Asalanka"
-      ],
-      "normalizedName": "charith asalanka",
-      "count": 2,
-      "indices": [
-        140,
-        342
-      ]
-    },
-    {
-      "originalNames": [
-        "Richard Gleeson"
-      ],
-      "normalizedName": "richard gleeson",
-      "count": 2,
-      "indices": [
-        141,
-        329
-      ]
-    },
-    {
-      "originalNames": [
-        "Kyle Jamieson"
-      ],
-      "normalizedName": "kyle jamieson",
-      "count": 2,
-      "indices": [
-        167,
-        277
-      ]
-    },
-    {
-      "originalNames": [
-        "Nandre Burger"
-      ],
-      "normalizedName": "nandre burger",
-      "count": 2,
-      "indices": [
-        187,
-        281
-      ]
-    },
-    {
-      "originalNames": [
-        "Tim Seifert"
-      ],
-      "normalizedName": "tim seifert",
-      "count": 2,
-      "indices": [
-        193,
-        280
-      ]
-    },
-    {
-      "originalNames": [
-        "Blessing Muzarabani"
-      ],
-      "normalizedName": "blessing muzarabani",
-      "count": 2,
-      "indices": [
-        201,
-        360
-      ]
-    },
-    {
-      "originalNames": [
-        "Smaran Ravichandran"
-      ],
-      "normalizedName": "smaran ravichandran",
-      "count": 2,
-      "indices": [
-        216,
-        411
-      ]
-    },
-    {
-      "originalNames": [
-        "Wiaan Mulder"
-      ],
-      "normalizedName": "wiaan mulder",
-      "count": 2,
-      "indices": [
-        221,
-        356
-      ]
-    },
-    {
-      "originalNames": [
-        "Harsh Dubey"
-      ],
-      "normalizedName": "harsh dubey",
-      "count": 2,
-      "indices": [
-        222,
-        528
-      ]
-    },
-    {
-      "originalNames": [
-        "Himanshu Singh"
-      ],
-      "normalizedName": "himanshu singh",
-      "count": 2,
-      "indices": [
-        464,
-        493
-      ]
-    }
-  ],
-  "exactDuplicateCount": 23,
+  "exactDuplicates": [],
+  "exactDuplicateCount": 0,
   "fuzzyDuplicates": [],
   "fuzzyDuplicateCount": 0,
   "uniqueNames": [
@@ -335,6 +81,7 @@
     "Atif Mushtaq",
     "Atit Sheth",
     "Auqib Dar",
+    "Auqib Nabi",
     "Avanish Aravelly",
     "Avesh Khan",
     "Avinash Singh",
@@ -366,6 +113,7 @@
     "Blessing Muzarabani",
     "Brandon King",
     "Brandon McMullen",
+    "Cameron Green",
     "Charith Asalanka",
     "Chetan Sakariya",
     "Chetan Sharma",
@@ -388,6 +136,7 @@
     "Deepak Chahar",
     "Deepak Devadiga",
     "Deepak Hooda",
+    "Devdutt Padikkal",
     "Devon Conway",
     "Dewald Brevis",
     "Dhruv Jurel",
@@ -416,6 +165,7 @@
     "Gaurav Gambhir",
     "Gerald Coetzee",
     "Girinath Reddy",
+    "Glenn Phillips",
     "Gudakesh Motie",
     "Gulbadin Naib",
     "Gurnoor Singh Brar",
@@ -444,11 +194,11 @@
     "Ishan Kishan",
     "Ishan Porel",
     "Ishant Sharma",
+    "Jacob Bethell",
+    "Jacob Duffy",
     "Jafar Jamal",
     "Jagadeesha Suchith",
     "Jalaj Saxena",
-    "James Anderson",
-    "James Vince",
     "Jamie Overton",
     "Jasmer Dhankhar",
     "Jason Behrendorff",
@@ -488,6 +238,7 @@
     "Karn Sharma",
     "Karteek Sharma",
     "Kartik Chadha",
+    "Kartik Sharma",
     "Kartik Tyagi",
     "Karun Nair",
     "Kaushik Maity",
@@ -523,6 +274,7 @@
     "Lhuan-dre Pretorious",
     "Liam Livingstone",
     "Litton Das",
+    "Lockie Ferguson",
     "Luke Wood",
     "Lungisani Ngidi",
     "Luvnith Sisodia",
@@ -537,6 +289,7 @@
     "Mahipal Lomror",
     "Manan Vohra",
     "Manav Suthar",
+    "Mangesh Yadav",
     "Manish Pandey",
     "Manish Reddy",
     "Manoj Bhandage",
@@ -551,7 +304,7 @@
     "Matthew Forde",
     "Matthew Potts",
     "Matthew Short",
-    "Mayank Agarawal",
+    "Matthew William Short",
     "Mayank Agarwal",
     "Mayank Dagar",
     "Mayank Gusain",
@@ -584,6 +337,7 @@
     "Mukesh Choudhary",
     "Mukesh Kumar",
     "Mukhtar Hussain",
+    "Mukul Choudhary",
     "Murugan Ashwin",
     "Musaif Ajaz",
     "Musheer Khan",
@@ -608,6 +362,7 @@
     "Nishanth Saranu",
     "Nishunk Birla",
     "Nitish Kumar Reddy",
+    "Nitish Rana",
     "Noor Ahmad",
     "Nqabayomzi Peter",
     "Nuwan Thushara",
@@ -631,6 +386,7 @@
     "Prashant Chauhan",
     "Prashant Sai Painkra",
     "Prashant Solanki",
+    "Prashant Veer",
     "Prasidh Krishna",
     "Prateek Yadav",
     "Pratham Singh",
@@ -694,6 +450,8 @@
     "Romario Shepherd",
     "Roshan Waghsare",
     "Roston Chase",
+    "Rovman Powell",
+    "Ryan Rickelton",
     "S. Midhun",
     "S. Rithik Easwaran",
     "Sabhay Chadha",
@@ -710,6 +468,7 @@
     "Samarth Nagraj",
     "Samarth Vyas",
     "Sameer Rizvi",
+    "Sandeep Sharma",
     "Sandeep Warrier",
     "Sanjay Yadav",
     "Sanju Samson",
@@ -724,7 +483,6 @@
     "Saurav Chauhan",
     "Sayed Irfan Aftab",
     "Sean Abbott",
-    "Sediqullah Atal",
     "Shahbaz Ahamad",
     "Shahrukh Khan",
     "Shai Hope",
@@ -809,6 +567,7 @@
     "Uday Saharan",
     "Umang Kumar",
     "Umesh Yadav",
+    "Umran Malik",
     "Unmukt Chand",
     "Upendra Singh Yadav",
     "Urvil Patel",
@@ -843,6 +602,7 @@
     "Washington Sundar",
     "Wayne Parnell",
     "Wiaan Mulder",
+    "Will Jacks",
     "Will Young",
     "William O'Rourke",
     "William Sutherland",
@@ -863,7 +623,7 @@
     "Zak Foulkes",
     "Zeeshan Ansari"
   ],
-  "uniqueCount": 604,
-  "totalPlayers": 627,
-  "reportGeneratedAt": "2026-05-18T18:29:51.228Z"
+  "uniqueCount": 618,
+  "totalPlayers": 618,
+  "reportGeneratedAt": "2026-05-22T15:08:13.701Z"
 }

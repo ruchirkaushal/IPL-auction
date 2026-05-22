@@ -37,11 +37,11 @@ export const MANUAL_OVERRIDES: Record<string, string> = {
   'unsold-1': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/214.png', // David Warner
   'unsold-10': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/1426.png', // Rilee Rossouw
   'unsold-11': 'https://media.crictracker.com/media/featureimage/2018/07/James-Vince.jpg', // James Vince
-  'unsold-17': 'https://assets.iplt20.com/ipl/IPLHeadshot2022/872.png?v=1.34', // Evin Lewis
-  'unsold-23': 'https://assets.iplt20.com/ipl/IPLHeadshot2022/20619.png?v=1.34', // Rassie Van Der Dussen
+  'unsold-17': 'https://www.iplt20.com/players/evin-lewis/872', // Evin Lewis
+  'unsold-23': 'https://www.iplt20.com/players/rassie-van-der-dussen/20619', // Rassie Van Der Dussen
   'unsold-51': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/820.png', // Sikandar Raza
   'unsold-52': 'https://images.dream11.com/eyJrZXkiOiJmYy1wbGF5ZXItaW1hZ2VzLzg0MjIucG5nIiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwicG9zaXRpb24iOiJ0b3AiLCJ3aWR0aCI6MjAwLCJoZWlnaHQiOjIwMH0sIndlYnAiOnsicXVhbGl0eSI6NjAsImxvc3NsZXNzIjpmYWxzZX19LCJvdXRwdXRGb3JtYXQiOiJ3ZWJwIn0=', // Will Young
-  'unsold-30': 'https://assets.iplt20.com/ipl/IPLHeadshot2022/2756.png?v=1.34', // Sam Billings
+  'unsold-30': 'https://www.iplt20.com/players/sam-billings/2756', // Sam Billings
   'unsold-47': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/268.png', // Shai Hope
   'unsold-61': 'https://documents.iplt20.com/playerheadshot/ipl/210/3882.png', // Alex Carey
   'unsold-16': 'https://documents.iplt20.com/playerheadshot/ipl/210/3309.png', // Tabraiz Shamsi
@@ -58,7 +58,7 @@ export const MANUAL_OVERRIDES: Record<string, string> = {
   'unsold-77': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/347.png', // Keshav Maharaj
   
   // Generic Fallbacks for missing/logo URLs
-  'unsold-9': DEFAULT_FALLBACK_IMAGE, // Ben Duckett
+  'unsold-9': DEFAULT_FALLBACK_IMAGE,  // Ben Duckett
   'unsold-94': DEFAULT_FALLBACK_IMAGE, // Litton Das
   'unsold-96': DEFAULT_FALLBACK_IMAGE, // Ollie Pope
   'unsold-33': DEFAULT_FALLBACK_IMAGE, // Tom Latham
@@ -69,7 +69,32 @@ export const MANUAL_OVERRIDES: Record<string, string> = {
   'unsold-45': DEFAULT_FALLBACK_IMAGE, // John Turner
   'unsold-55': DEFAULT_FALLBACK_IMAGE, // Ashton Agar
   'unsold-73': DEFAULT_FALLBACK_IMAGE, // Wayne Parnell
-  'kkr-18': DEFAULT_FALLBACK_IMAGE, // Shivam Shukla
+  'kkr-18': DEFAULT_FALLBACK_IMAGE,    // Shivam Shukla
+
+  // New Players (scraped from IPL profile pages)
+  'dc-20':      'https://documents.iplt20.com/ipl/IPLHeadshot2026/1462.png', // Mukesh Kumar
+  'unsold-171': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/3104.png', // Sakib Hussain
+  'unsold-346': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/1041.png', // Corbin Bosch
+  'unsold-216': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/4556.png', // Salil Arora
+  'unsold-211': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/1487.png', // Akshat Raghuwanshi
+  'unsold-396': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/4540.png', // Kartik Sharma
+  'unsold-397': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/200.png',  // Devdutt Padikkal
+  'unsold-398': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/148.png',  // Nitish Rana
+  'unsold-399': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/635.png',  // Glenn Phillips
+  'unsold-400': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/329.png',  // Rovman Powell
+  'unsold-401': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/4543.png', // Auqib Nabi
+  'unsold-402': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/2032.png', // Matthew William Short
+  'unsold-403': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/869.png',  // Jacob Bethell
+  'unsold-404': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/4541.png', // Prashant Veer
+  'unsold-405': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/550.png',  // Cameron Green
+  'unsold-406': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/637.png',  // Umran Malik
+  'unsold-407': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/1701.png', // Jacob Duffy
+  'unsold-408': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/4549.png', // Mukul Choudhary
+  'unsold-409': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/743.png',  // Ryan Rickelton
+  'unsold-410': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/1941.png', // Will Jacks
+  'unsold-411': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/69.png',   // Lockie Ferguson
+  'unsold-412': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/220.png',  // Sandeep Sharma
+  'unsold-413': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/4554.png', // Mangesh Yadav
 };
 
 async function probeUrl(url: string): Promise<boolean> {

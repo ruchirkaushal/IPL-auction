@@ -18,7 +18,6 @@ const UNSOLD: Player[] = [
   P('unsold-8', 'Finn Allen', 'AR', 'Overseas', true, 200, 3020, 0, 0, 0, 4, true, 'Unsold'),
   P('unsold-9', 'Ben Duckett', 'AR', 'Overseas', true, 200, 0, 0, 0, 0, 4, true, 'Unsold'),
   P('unsold-10', 'Rilee Rossouw', 'AR', 'Overseas', true, 200, 0, 0, 0, 0, 4, true, 'Unsold'),
-  P('unsold-11', 'James Vince', 'AR', 'Overseas', true, 200, 0, 0, 0, 0, 4, true, 'Unsold'),
   P('unsold-12', 'Tom Banton', 'AR', 'Overseas', true, 200, 3770, 0, 0, 0, 4, true, 'Unsold'),
   P('unsold-14', 'Naveen Ul Haq', 'AR', 'Overseas', true, 200, 5681, 0, 0, 0, 4, true, 'Unsold'),
   P('unsold-15', 'Umesh Yadav', 'AR', 'India', false, 200, 59, 0, 0, 0, 4, true, 'Unsold'),
@@ -381,6 +380,24 @@ const UNSOLD: Player[] = [
   P('unsold-393', 'Vijay Yadav', 'AR', 'India', false, 30, 0, 0, 0, 0, 1, false, 'Unsold'),
   P('unsold-394', 'Saurabh Netravalkar', 'AR', 'India', false, 30, 0, 0, 0, 0, 1, false, 'Unsold'),
   P('unsold-395', 'Hardik Tamore', 'AR', 'India', false, 30, 0, 0, 0, 0, 1, false, 'Unsold'),
+  P('unsold-396', 'Kartik Sharma', 'BAT', 'India', false, 30, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-397', 'Devdutt Padikkal', 'BAT', 'India', false, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-398', 'Nitish Rana', 'BAT', 'India', false, 150, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-399', 'Glenn Phillips', 'BAT', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-400', 'Rovman Powell', 'BAT', 'West Indies', true, 150, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-401', 'Auqib Nabi', 'BL', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold'),
+  P('unsold-402', 'Matthew William Short', 'AR', 'Australia', true, 150, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-403', 'Jacob Bethell', 'AR', 'England', true, 125, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-404', 'Prashant Veer', 'AR', 'India', false, 30, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-405', 'Cameron Green', 'AR', 'Australia', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-406', 'Umran Malik', 'BL', 'India', false, 75, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-407', 'Jacob Duffy', 'BL', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-408', 'Mukul Choudhary', 'WK', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold'),
+  P('unsold-409', 'Ryan Rickelton', 'WK', 'South Africa', true, 100, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-410', 'Will Jacks', 'AR', 'England', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-411', 'Lockie Ferguson', 'BL', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-412', 'Sandeep Sharma', 'BL', 'India', false, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-413', 'Mangesh Yadav', 'AR', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold')
 ];
 
 export { UNSOLD };

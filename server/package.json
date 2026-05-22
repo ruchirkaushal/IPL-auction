@@ -1,10 +1,9 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "ts-node index.ts",
-    "build": "echo done",
-    "start": "ts-node index.ts",
     "scan-duplicates": "ts-node scan-duplicates.ts"
   },
   "dependencies": {

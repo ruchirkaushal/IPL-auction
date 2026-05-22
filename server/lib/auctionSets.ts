@@ -94,6 +94,12 @@ const MANUAL_SET_OVERRIDES: Record<string, string> = {
   'Ollie Pope': 'BA2',
   'Cooper Connolly': 'BA2',
   'Sarfaraz Khan': 'BA2',
+  'Kartik Sharma': 'BA2',
+  'Devdutt Padikkal': 'BA2',
+
+  'Nitish Rana': 'BA1',
+  'Glenn Phillips': 'BA1',
+  'Rovman Powell': 'BA1',
 
   'Tom Curran': 'AL2',
   'Mohammad Nabi': 'AL2',
@@ -108,6 +114,33 @@ const MANUAL_SET_OVERRIDES: Record<string, string> = {
   'Mark Chapman': 'AL2',
   'Ashton Turner': 'AL2',
   'Krishnappa Gowtham': 'AL2',
+  'Matthew William Short': 'AL2',
+  'Jacob Bethell': 'AL2',
+  'Corbin Bosch': 'AL2',
+  'Prashant Veer': 'AL2',
+
+  'Cameron Green': 'M2',
+
+  'Umran Malik': 'BL2',
+  'Jacob Duffy': 'BL2',
+
+  'Mukul Choudhary': 'UWK1',
+  'Salil Arora': 'UWK1',
+
+  'Akshat Raghuwanshi': 'UBA1',
+
+  'Ryan Rickelton': 'WK1',
+
+  'Will Jacks': 'AL1',
+
+  'Lockie Ferguson': 'BL1',
+  'Sandeep Sharma': 'BL1',
+
+  'Mukesh Kumar': 'UBL1',
+  'Auqib Nabi': 'UBL1',
+  'Sakib Hussain': 'UBL1',
+
+  'Mangesh Yadav': 'UAL1',
 };
 
 // Apply manual promotions: force starRating
