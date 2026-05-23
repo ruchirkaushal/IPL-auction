@@ -2,13 +2,13 @@
 // Sources: https://www.iplt20.com/teams/*/squad/2025
 // Photo URL pattern: https://documents.iplt20.com/ipl/IPLHeadshot2025/{playerID}.png
 
-import { normalizeBasePrice } from '../../shared/auctionPricing.ts';
+import { normalizeBasePrice } from '../../shared/auctionPricing';
 
-import { CSK, DC } from './players.ts';
-import { GT, KKR, LSG } from './players-gt-kkr-lsg.ts';
-import { MI, PBKS } from './players-mi-pbks.ts';
-import { RR, RCB, SRH } from './players-rr-rcb-srh.ts';
-import { UNSOLD } from './unsold.ts';
+import { CSK, DC } from './players';
+import { GT, KKR, LSG } from './players-gt-kkr-lsg';
+import { MI, PBKS } from './players-mi-pbks';
+import { RR, RCB, SRH } from './players-rr-rcb-srh';
+import { UNSOLD } from './unsold';
 
 // Re-export individual teams
 export { CSK, DC, GT, KKR, LSG, MI, PBKS, RR, RCB, SRH, UNSOLD };

@@ -21,7 +21,7 @@
  *   → Remove other duplicates
  */
 
-import { normalizePlayerName } from './playerDuplicateDetector.ts';
+import { normalizePlayerName } from './playerDuplicateDetector';
 
 // ============================================================================
 // TYPES & INTERFACES

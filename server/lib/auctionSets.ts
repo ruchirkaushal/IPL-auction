@@ -1,5 +1,5 @@
-import { ALL_PLAYERS } from './allPlayers.ts';
-import type { Player } from '../index.ts';
+import { ALL_PLAYERS } from './allPlayers';
+import type { Player } from '../index';
 
 export interface AuctionSet {
   setNumber: number;

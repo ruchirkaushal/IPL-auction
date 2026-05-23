@@ -4,6 +4,7 @@
 // Photo URL pattern: https://documents.iplt20.com/ipl/IPLHeadshot2025/{playerID}.png
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ALL_PLAYERS = exports.UNSOLD = exports.SRH = exports.RCB = exports.RR = exports.PBKS = exports.MI = exports.LSG = exports.KKR = exports.GT = exports.DC = exports.CSK = void 0;
+const auctionPricing_1 = require("../../shared/auctionPricing");
 const players_1 = require("./players");
 Object.defineProperty(exports, "CSK", { enumerable: true, get: function () { return players_1.CSK; } });
 Object.defineProperty(exports, "DC", { enumerable: true, get: function () { return players_1.DC; } });
@@ -33,5 +34,12 @@ exports.ALL_PLAYERS = [
     ...players_rr_rcb_srh_1.RCB, // 23 players
     ...players_rr_rcb_srh_1.SRH, // 21 players
     ...unsold_1.UNSOLD, // 10 players
-];
+].map((player) => {
+    return {
+        ...player,
+        image: player.photoUrl,
+        photoUrl: player.photoUrl,
+        basePrice: (0, auctionPricing_1.normalizeBasePrice)(player.basePrice),
+    };
+});
 // Total: 242 players

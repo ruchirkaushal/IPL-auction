@@ -2,21 +2,21 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
-import { ALL_PLAYERS } from './lib/allPlayers.ts';
-import { resolveAllPlayerImages } from '../shared/playerImageResolver.ts';
-import { createAuctionQueue, getAuctionSets } from './lib/auctionSets.ts';
+import { ALL_PLAYERS } from './lib/allPlayers';
+import { resolveAllPlayerImages } from '../shared/playerImageResolver';
+import { createAuctionQueue, getAuctionSets } from './lib/auctionSets';
 import {
   INITIAL_PURSE_LAKHS,
   MAX_OVERSEAS_PLAYERS,
   MAX_SQUAD_SIZE,
-} from '../shared/auctionConfig.ts';
+} from '../shared/auctionConfig';
 import {
   formatAuctionMoney,
   getNextBid,
   isValidBidAmount,
   normalizeBasePrice,
   toSafeLakhs,
-} from '../shared/auctionPricing.ts';
+} from '../shared/auctionPricing';
 
 // Types (Imported from client or duplicated)
 export type TeamId = 'MI' | 'CSK' | 'RCB' | 'KKR' | 'DC' | 'RR' | 'PBKS' | 'SRH' | 'GT' | 'LSG';

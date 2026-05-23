@@ -1,5 +1,5 @@
-import type { Player, PlayerRole } from '../index.ts';
-import { normalizeBasePrice } from '../../shared/auctionPricing.ts';
+import type { Player, PlayerRole } from '../index';
+import { normalizeBasePrice } from '../../shared/auctionPricing';
 
 const P = (id: string, name: string, role: PlayerRole, country: string, isOverseas: boolean, basePrice: number, pid: number, matches: number, runs: number, wickets: number, starRating: number, isCapped: boolean, previousTeam: string, auctionSet = 9): Player => ({
   id, name, role, country, isOverseas, basePrice: normalizeBasePrice(basePrice),

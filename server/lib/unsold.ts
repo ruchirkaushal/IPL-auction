@@ -1,5 +1,5 @@
-import type { Player, PlayerRole } from '../index.ts';
-import { normalizeBasePrice } from '../../shared/auctionPricing.ts';
+import type { Player, PlayerRole } from '../index';
+import { normalizeBasePrice } from '../../shared/auctionPricing';
 
 const P = (id: string, name: string, role: PlayerRole, country: string, isOverseas: boolean, basePrice: number, pid: number | string, matches: number, runs: number, wickets: number, starRating: number, isCapped: boolean, previousTeam: string, auctionSet = 9): Player => ({
   id, name, role, country, isOverseas, basePrice: normalizeBasePrice(basePrice),
@@ -385,18 +385,18 @@ const UNSOLD: Player[] = [
   P('unsold-398', 'Nitish Rana', 'BAT', 'India', false, 150, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-399', 'Glenn Phillips', 'BAT', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-400', 'Rovman Powell', 'BAT', 'West Indies', true, 150, 0, 0, 0, 0, 3, true, 'Unsold'),
-  P('unsold-401', 'Auqib Nabi', 'BL', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold'),
+  P('unsold-401', 'Auqib Nabi', 'BOWL', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold'),
   P('unsold-402', 'Matthew William Short', 'AR', 'Australia', true, 150, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-403', 'Jacob Bethell', 'AR', 'England', true, 125, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-404', 'Prashant Veer', 'AR', 'India', false, 30, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-405', 'Cameron Green', 'AR', 'Australia', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
-  P('unsold-406', 'Umran Malik', 'BL', 'India', false, 75, 0, 0, 0, 0, 3, true, 'Unsold'),
-  P('unsold-407', 'Jacob Duffy', 'BL', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-406', 'Umran Malik', 'BOWL', 'India', false, 75, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-407', 'Jacob Duffy', 'BOWL', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-408', 'Mukul Choudhary', 'WK', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold'),
   P('unsold-409', 'Ryan Rickelton', 'WK', 'South Africa', true, 100, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-410', 'Will Jacks', 'AR', 'England', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
-  P('unsold-411', 'Lockie Ferguson', 'BL', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
-  P('unsold-412', 'Sandeep Sharma', 'BL', 'India', false, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-411', 'Lockie Ferguson', 'BOWL', 'New Zealand', true, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
+  P('unsold-412', 'Sandeep Sharma', 'BOWL', 'India', false, 200, 0, 0, 0, 0, 3, true, 'Unsold'),
   P('unsold-413', 'Mangesh Yadav', 'AR', 'India', false, 30, 0, 0, 0, 0, 3, false, 'Unsold')
 ];
 

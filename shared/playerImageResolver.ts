@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const CACHE_FILE = path.join(__dirname, 'imageCache.json');
+const CACHE_FILE = path.join(process.cwd(), 'imageCache.json');
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022'];
 export const DEFAULT_FALLBACK_IMAGE = 'https://documents.iplt20.com/ipl/assets/images/Default-Men.png';

@@ -11,7 +11,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { ALL_PLAYERS } from './lib/allPlayers.ts';
+import { ALL_PLAYERS } from './lib/allPlayers';
 import {
   deduplicateDatabase,
   formatDeduplicationReport,
@@ -19,7 +19,7 @@ import {
   generateCleanupSummary,
   generateKeptEntriesReport,
   generateRemovedDuplicatesReport
-} from '../shared/playerDeduplicator.ts';
+} from '../shared/playerDeduplicator';
 
 // ============================================================================
 // CLI CONFIGURATION
