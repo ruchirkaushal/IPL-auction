@@ -78,6 +78,7 @@ interface Room {
   timerInterval: NodeJS.Timeout | null;
   autoAdvanceTimeout: NodeJS.Timeout | null;
   aiTimeouts: NodeJS.Timeout[];
+  deletionTimeout?: NodeJS.Timeout | null;
 }
 
 const rooms = new Map<string, Room>();
@@ -382,7 +383,8 @@ io.on('connection', (socket: Socket) => {
       state: roomState,
       timerInterval: null,
       autoAdvanceTimeout: null,
-      aiTimeouts: []
+      aiTimeouts: [],
+      deletionTimeout: null
     });
 
     socket.join(roomCode);
@@ -393,10 +395,31 @@ io.on('connection', (socket: Socket) => {
   socket.on('join_room', ({ roomCode, playerName }: { roomCode: string, playerName: string }) => {
     const room = rooms.get(roomCode);
     if (!room) { socket.emit('error', { message: 'Room not found' }); return; }
-    if (room.state.isLocked) { socket.emit('error', { message: 'Room is locked' }); return; }
-    if (room.state.players.length >= 10) { socket.emit('error', { message: 'Room is full' }); return; }
 
-    room.state.players.push({ socketId: socket.id, name: playerName, teamId: null, isHost: false, isReady: false });
+    if (room.deletionTimeout) {
+      clearTimeout(room.deletionTimeout);
+      room.deletionTimeout = null;
+    }
+
+    const existingPlayerIndex = room.state.players.findIndex(p => p.name === playerName);
+    const isRejoining = existingPlayerIndex !== -1 && room.state.players[existingPlayerIndex].socketId === '';
+
+    if (!isRejoining && room.state.isLocked) { socket.emit('error', { message: 'Room is locked' }); return; }
+    if (!isRejoining && room.state.players.filter(p => p.socketId !== '').length >= 10) { socket.emit('error', { message: 'Room is full' }); return; }
+
+    if (isRejoining) {
+      const oldPlayer = room.state.players[existingPlayerIndex];
+      oldPlayer.socketId = socket.id;
+      if (oldPlayer.teamId) {
+        room.state.teams[oldPlayer.teamId].ownerId = socket.id;
+      }
+    } else {
+      room.state.players.push({ socketId: socket.id, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
+      if (room.state.players.length === 1) {
+        room.state.hostId = socket.id;
+      }
+    }
+
     socket.join(roomCode);
     socket.emit('room_joined', { roomCode });
     emitRoomState(roomCode);
@@ -589,11 +612,39 @@ io.on('connection', (socket: Socket) => {
     emitRoomState(roomCode);
   });
 
-  const handleLeaveRoom = (socketId: string) => {
+  const handleLeaveRoom = (socketId: string, isDisconnect: boolean = false) => {
     rooms.forEach((room, roomCode) => {
       const playerIndex = room.state.players.findIndex(p => p.socketId === socketId);
       if (playerIndex !== -1) {
         const player = room.state.players[playerIndex];
+
+        if (isDisconnect && room.state.isLocked) {
+          player.socketId = '';
+          if (player.teamId) {
+            room.state.teams[player.teamId].ownerId = null;
+          }
+
+          const allDisconnected = room.state.players.every(p => p.socketId === '');
+          if (allDisconnected) {
+            room.deletionTimeout = setTimeout(() => {
+              const checkRoom = rooms.get(roomCode);
+              if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
+                clearAllTimers(checkRoom);
+                rooms.delete(roomCode);
+              }
+            }, 60000);
+          } else if (player.isHost) {
+            const nextHost = room.state.players.find(p => p.socketId !== '');
+            if (nextHost) {
+              player.isHost = false;
+              nextHost.isHost = true;
+              room.state.hostId = nextHost.socketId;
+            }
+          }
+          emitRoomState(roomCode);
+          return;
+        }
+
         if (player.teamId) {
           room.state.teams[player.teamId].ownerId = null;
           room.state.teams[player.teamId].ownerName = null;
@@ -605,12 +656,14 @@ io.on('connection', (socket: Socket) => {
           clientSocket.leave(roomCode);
         }
 
-        if (room.state.players.length === 0) {
+        const activePlayers = room.state.players.filter(p => p.socketId !== '');
+        if (activePlayers.length === 0) {
           clearAllTimers(room);
           rooms.delete(roomCode);
         } else if (player.isHost) {
-          room.state.players[0].isHost = true;
-          room.state.hostId = room.state.players[0].socketId;
+          const nextHost = activePlayers[0];
+          nextHost.isHost = true;
+          room.state.hostId = nextHost.socketId;
           emitRoomState(roomCode);
         } else {
           emitRoomState(roomCode);
@@ -620,7 +673,7 @@ io.on('connection', (socket: Socket) => {
   };
 
   socket.on('leave_room', () => {
-    handleLeaveRoom(socket.id);
+    handleLeaveRoom(socket.id, false);
   });
 
   socket.on('kick_player', ({ roomCode, targetSocketId }: { roomCode: string, targetSocketId: string }) => {
@@ -650,7 +703,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('disconnect', () => {
-    handleLeaveRoom(socket.id);
+    handleLeaveRoom(socket.id, true);
   });
 });
 

@@ -57,7 +57,17 @@ export const useSocket = () => {
     const newSocket = io(VITE_SERVER_URL);
     setSocket(newSocket);
 
-    newSocket.on('connect', () => setIsConnected(true));
+    newSocket.on('connect', () => {
+      setIsConnected(true);
+      const match = window.location.pathname.match(/\/(lobby|auction|summary)\/([^/]+)/);
+      if (match) {
+        const roomCode = match[2];
+        const playerName = localStorage.getItem('playerName');
+        if (roomCode && playerName) {
+          newSocket.emit('join_room', { roomCode, playerName });
+        }
+      }
+    });
     newSocket.on('disconnect', () => setIsConnected(false));
 
     newSocket.on('room_state_update', (state: RoomState) => {
@@ -150,10 +160,12 @@ export const useSocket = () => {
   }, []);
 
   const createRoom = useCallback((playerName: string) => {
+    localStorage.setItem('playerName', playerName);
     if (socket) socket.emit('create_room', { playerName });
   }, [socket]);
 
   const joinRoom = useCallback((roomCode: string, playerName: string) => {
+    localStorage.setItem('playerName', playerName);
     if (socket) socket.emit('join_room', { roomCode, playerName });
   }, [socket]);
 
