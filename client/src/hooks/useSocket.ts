@@ -63,8 +63,13 @@ export const useSocket = () => {
       if (match) {
         const roomCode = match[2];
         const playerName = localStorage.getItem('playerName');
-        if (roomCode && playerName) {
-          newSocket.emit('join_room', { roomCode, playerName });
+        let userId = localStorage.getItem('ipl_auction_user_id');
+        if (!userId) {
+          userId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          localStorage.setItem('ipl_auction_user_id', userId);
+        }
+        if (roomCode && playerName && userId) {
+          newSocket.emit('join_room', { roomCode, playerName, userId });
         }
       }
     });
@@ -181,12 +186,22 @@ export const useSocket = () => {
 
   const createRoom = useCallback((playerName: string) => {
     localStorage.setItem('playerName', playerName);
-    if (socket) socket.emit('create_room', { playerName });
+    let userId = localStorage.getItem('ipl_auction_user_id');
+    if (!userId) {
+      userId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('ipl_auction_user_id', userId);
+    }
+    if (socket) socket.emit('create_room', { playerName, userId });
   }, [socket]);
 
   const joinRoom = useCallback((roomCode: string, playerName: string) => {
     localStorage.setItem('playerName', playerName);
-    if (socket) socket.emit('join_room', { roomCode, playerName });
+    let userId = localStorage.getItem('ipl_auction_user_id');
+    if (!userId) {
+      userId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('ipl_auction_user_id', userId);
+    }
+    if (socket) socket.emit('join_room', { roomCode, playerName, userId });
   }, [socket]);
 
   const selectTeam = useCallback((roomCode: string, teamId: TeamId) => {

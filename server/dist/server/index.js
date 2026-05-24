@@ -33,6 +33,7 @@ const getSetNameForPlayer = (playerId) => {
     return match ? match.setName : '';
 };
 const rooms = new Map();
+const reconnectTimeouts = new Map();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -263,7 +264,7 @@ const startTimer = (room) => {
     }, 100);
 };
 io.on('connection', (socket) => {
-    socket.on('create_room', ({ playerName }) => {
+    socket.on('create_room', ({ playerName, userId }) => {
         const roomCode = generateRoomCode();
         const initialTeams = {};
         ALL_TEAM_IDS.forEach(id => {
@@ -280,7 +281,7 @@ io.on('connection', (socket) => {
         const roomState = {
             roomCode,
             hostId: socket.id,
-            players: [{ socketId: socket.id, name: playerName, teamId: null, isHost: true, isReady: false }],
+            players: [{ socketId: socket.id, userId, name: playerName, teamId: null, isHost: true, isReady: false }],
             teams: initialTeams,
             auction: {
                 isStarted: false,
@@ -303,27 +304,58 @@ io.on('connection', (socket) => {
             state: roomState,
             timerInterval: null,
             autoAdvanceTimeout: null,
-            aiTimeouts: []
+            aiTimeouts: [],
+            deletionTimeout: null
         });
         socket.join(roomCode);
         socket.emit('room_created', { roomCode });
         emitRoomState(roomCode);
     });
-    socket.on('join_room', ({ roomCode, playerName }) => {
+    socket.on('join_room', ({ roomCode, playerName, userId }) => {
         const room = rooms.get(roomCode);
         if (!room) {
             socket.emit('error', { message: 'Room not found' });
             return;
         }
-        if (room.state.isLocked) {
+        if (room.deletionTimeout) {
+            clearTimeout(room.deletionTimeout);
+            room.deletionTimeout = null;
+        }
+        // Clear reconnect timeout if any
+        const key = `${roomCode}_${playerName}`;
+        const pendingTimeout = reconnectTimeouts.get(key);
+        if (pendingTimeout) {
+            clearTimeout(pendingTimeout);
+            reconnectTimeouts.delete(key);
+        }
+        // Use userId for strong identity. Fallback to name for legacy clients if needed.
+        const existingPlayerIndex = room.state.players.findIndex(p => p.userId === userId || (p.userId === undefined && p.name === playerName));
+        const isRejoining = existingPlayerIndex !== -1;
+        if (!isRejoining && room.state.isLocked) {
             socket.emit('error', { message: 'Room is locked' });
             return;
         }
-        if (room.state.players.length >= 10) {
+        if (!isRejoining && room.state.players.filter(p => p.socketId !== '').length >= 10) {
             socket.emit('error', { message: 'Room is full' });
             return;
         }
-        room.state.players.push({ socketId: socket.id, name: playerName, teamId: null, isHost: false, isReady: false });
+        if (isRejoining) {
+            const oldPlayer = room.state.players[existingPlayerIndex];
+            oldPlayer.socketId = socket.id;
+            if (oldPlayer.teamId) {
+                room.state.teams[oldPlayer.teamId].ownerId = socket.id;
+                room.state.teams[oldPlayer.teamId].ownerName = oldPlayer.name;
+            }
+            if (oldPlayer.isHost) {
+                room.state.hostId = socket.id;
+            }
+        }
+        else {
+            room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
+            if (room.state.players.length === 1) {
+                room.state.hostId = socket.id;
+            }
+        }
         socket.join(roomCode);
         socket.emit('room_joined', { roomCode });
         emitRoomState(roomCode);
@@ -497,11 +529,84 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('auction_complete', room.state);
         emitRoomState(roomCode);
     });
-    const handleLeaveRoom = (socketId) => {
+    const handleLeaveRoom = (socketId, isDisconnect = false) => {
         rooms.forEach((room, roomCode) => {
             const playerIndex = room.state.players.findIndex(p => p.socketId === socketId);
             if (playerIndex !== -1) {
                 const player = room.state.players[playerIndex];
+                if (isDisconnect) {
+                    // 1. Mark socket as empty
+                    player.socketId = '';
+                    if (player.teamId) {
+                        room.state.teams[player.teamId].ownerId = null;
+                    }
+                    // Emit immediately so other players see they went offline
+                    emitRoomState(roomCode);
+                    // 2. Set up the reconnect grace period (10 seconds)
+                    const key = `${roomCode}_${player.name}`;
+                    // Clear any existing timeout for this player
+                    const oldTimeout = reconnectTimeouts.get(key);
+                    if (oldTimeout)
+                        clearTimeout(oldTimeout);
+                    const timeout = setTimeout(() => {
+                        reconnectTimeouts.delete(key);
+                        // Fetch the room and player again, in case the room was deleted or player state changed
+                        const currentRoom = rooms.get(roomCode);
+                        if (!currentRoom)
+                            return;
+                        const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.name === player.name);
+                        if (currentPlayerIndex === -1)
+                            return;
+                        const currentPlayer = currentRoom.state.players[currentPlayerIndex];
+                        if (currentPlayer.socketId !== '') {
+                            // They reconnected, do nothing!
+                            return;
+                        }
+                        // They did not reconnect in time. Handle actual leave!
+                        const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
+                        // Handle Host Transfer if they were the host
+                        if (currentPlayer.isHost) {
+                            currentPlayer.isHost = false;
+                            if (activePlayers.length > 0) {
+                                const nextHost = activePlayers[0];
+                                nextHost.isHost = true;
+                                currentRoom.state.hostId = nextHost.socketId;
+                            }
+                        }
+                        // Cleanup player if room is NOT locked
+                        if (!currentRoom.state.isLocked) {
+                            if (currentPlayer.teamId) {
+                                currentRoom.state.teams[currentPlayer.teamId].ownerId = null;
+                                currentRoom.state.teams[currentPlayer.teamId].ownerName = null;
+                            }
+                            currentRoom.state.players.splice(currentPlayerIndex, 1);
+                        }
+                        // Handle room deletion if no active players are left
+                        const remainingActive = currentRoom.state.players.filter(p => p.socketId !== '');
+                        if (remainingActive.length === 0) {
+                            if (currentRoom.deletionTimeout)
+                                clearTimeout(currentRoom.deletionTimeout);
+                            currentRoom.deletionTimeout = setTimeout(() => {
+                                const checkRoom = rooms.get(roomCode);
+                                if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
+                                    clearAllTimers(checkRoom);
+                                    rooms.delete(roomCode);
+                                }
+                            }, 60000);
+                        }
+                        emitRoomState(roomCode);
+                    }, 10000);
+                    reconnectTimeouts.set(key, timeout);
+                    return;
+                }
+                // --- Explicit Leave Room (socket.emit('leave_room')) ---
+                // Cancel any pending reconnect timeout
+                const key = `${roomCode}_${player.name}`;
+                const pending = reconnectTimeouts.get(key);
+                if (pending) {
+                    clearTimeout(pending);
+                    reconnectTimeouts.delete(key);
+                }
                 if (player.teamId) {
                     room.state.teams[player.teamId].ownerId = null;
                     room.state.teams[player.teamId].ownerName = null;
@@ -511,13 +616,15 @@ io.on('connection', (socket) => {
                 if (clientSocket) {
                     clientSocket.leave(roomCode);
                 }
-                if (room.state.players.length === 0) {
+                const activePlayers = room.state.players.filter(p => p.socketId !== '');
+                if (activePlayers.length === 0) {
                     clearAllTimers(room);
                     rooms.delete(roomCode);
                 }
                 else if (player.isHost) {
-                    room.state.players[0].isHost = true;
-                    room.state.hostId = room.state.players[0].socketId;
+                    const nextHost = activePlayers[0];
+                    nextHost.isHost = true;
+                    room.state.hostId = nextHost.socketId;
                     emitRoomState(roomCode);
                 }
                 else {
@@ -527,7 +634,7 @@ io.on('connection', (socket) => {
         });
     };
     socket.on('leave_room', () => {
-        handleLeaveRoom(socket.id);
+        handleLeaveRoom(socket.id, false);
     });
     socket.on('kick_player', ({ roomCode, targetSocketId }) => {
         const room = rooms.get(roomCode);
@@ -552,7 +659,7 @@ io.on('connection', (socket) => {
         }
     });
     socket.on('disconnect', () => {
-        handleLeaveRoom(socket.id);
+        handleLeaveRoom(socket.id, true);
     });
 });
 const PORT = 3005;

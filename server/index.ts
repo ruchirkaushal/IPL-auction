@@ -45,7 +45,7 @@ export interface TeamState {
   status: 'idle' | 'leading' | 'passed'; 
 }
 export interface AuctionState { isStarted: boolean; currentPlayerIndex: number; auctionQueue: string[]; currentBid: number; nextBidAmount: number | null; highestBidderId: TeamId | null; ticks: number; phase: AuctionPhase; passedTeams: TeamId[]; isAdvancing: boolean; currentSetName: string; isPaused: boolean; }
-export interface RoomPlayer { socketId: string; name: string; teamId: TeamId | null; isHost: boolean; isReady: boolean; }
+export interface RoomPlayer { socketId: string; userId: string; name: string; teamId: TeamId | null; isHost: boolean; isReady: boolean; }
 export interface RoomState { roomCode: string; hostId: string; players: RoomPlayer[]; teams: Record<TeamId, TeamState>; auction: AuctionState; chat: ChatMessage[]; isLocked: boolean; }
 
 // Constants
@@ -341,7 +341,7 @@ const startTimer = (room: Room) => {
 };
 
 io.on('connection', (socket: Socket) => {
-  socket.on('create_room', ({ playerName }: { playerName: string }) => {
+  socket.on('create_room', ({ playerName, userId }: { playerName: string, userId: string }) => {
     const roomCode = generateRoomCode();
     
     const initialTeams = {} as Record<TeamId, TeamState>;
@@ -360,7 +360,7 @@ io.on('connection', (socket: Socket) => {
     const roomState: RoomState = {
       roomCode,
       hostId: socket.id,
-      players: [{ socketId: socket.id, name: playerName, teamId: null, isHost: true, isReady: false }],
+      players: [{ socketId: socket.id, userId, name: playerName, teamId: null, isHost: true, isReady: false }],
       teams: initialTeams,
       auction: {
         isStarted: false,
@@ -393,7 +393,7 @@ io.on('connection', (socket: Socket) => {
     emitRoomState(roomCode);
   });
 
-  socket.on('join_room', ({ roomCode, playerName }: { roomCode: string, playerName: string }) => {
+  socket.on('join_room', ({ roomCode, playerName, userId }: { roomCode: string, playerName: string, userId: string }) => {
     const room = rooms.get(roomCode);
     if (!room) { socket.emit('error', { message: 'Room not found' }); return; }
 
@@ -410,8 +410,9 @@ io.on('connection', (socket: Socket) => {
       reconnectTimeouts.delete(key);
     }
 
-    const existingPlayerIndex = room.state.players.findIndex(p => p.name === playerName);
-    const isRejoining = existingPlayerIndex !== -1 && room.state.players[existingPlayerIndex].socketId === '';
+    // Use userId for strong identity. Fallback to name for legacy clients if needed.
+    const existingPlayerIndex = room.state.players.findIndex(p => p.userId === userId || (p.userId === undefined && p.name === playerName));
+    const isRejoining = existingPlayerIndex !== -1;
 
     if (!isRejoining && room.state.isLocked) { socket.emit('error', { message: 'Room is locked' }); return; }
     if (!isRejoining && room.state.players.filter(p => p.socketId !== '').length >= 10) { socket.emit('error', { message: 'Room is full' }); return; }
@@ -427,7 +428,7 @@ io.on('connection', (socket: Socket) => {
         room.state.hostId = socket.id;
       }
     } else {
-      room.state.players.push({ socketId: socket.id, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
+      room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
       if (room.state.players.length === 1) {
         room.state.hostId = socket.id;
       }
