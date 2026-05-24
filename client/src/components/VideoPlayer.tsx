@@ -289,7 +289,7 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
              </div>
 
              {/* LOWER STATS STRIP */}
-             <div className="w-[99%] max-w-[2450px] h-[80px] bg-[#001120] border-2 border-[#00e5ff] flex items-stretch justify-center relative overflow-hidden backdrop-blur-lg shadow-[inset_0_0_20px_rgba(0,229,255,0.2),0_10px_20px_rgba(0,0,0,0.5)] mt-1">
+             <div className="stats-strip w-[99%] max-w-[2450px] h-[80px] bg-[#001120] border-2 border-[#00e5ff] flex items-stretch justify-center relative overflow-hidden backdrop-blur-lg shadow-[inset_0_0_20px_rgba(0,229,255,0.2),0_10px_20px_rgba(0,0,0,0.5)] mt-1">
                 <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/5 pointer-events-none" />
                 
                 {roomState?.auction?.currentSetName && (

@@ -49,14 +49,14 @@ export default function MobileLandscapeAuction({
     <div className="mobile-landscape-mode flex flex-row w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30 text-xs">
 
       {/* Left panel: Team Standings (Compact) */}
-      <div className="w-[28%] h-full border-r border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
+      <div className="w-[26%] h-full border-r border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
         <div className="h-full overflow-y-auto custom-scrollbar scale-[0.85] origin-top-left w-[117.6%]">
           <TeamPanel teams={roomState.teams} allPlayers={allPlayers} />
         </div>
       </div>
 
       {/* Center panel: Auction Stage — video fills full height */}
-      <div className="center-auction-stage w-[44%] h-full relative overflow-hidden bg-black">
+      <div className="center-auction-stage w-[48%] h-full relative overflow-hidden bg-black">
 
         {/* Floating top header — absolute, zero layout impact */}
         <div className="top-header-overlay absolute top-2 left-2 right-2 z-40 flex justify-between items-center pointer-events-none">
@@ -218,7 +218,7 @@ export default function MobileLandscapeAuction({
       </div>
 
       {/* Right panel: Chat Commentary (Compact) */}
-      <div className="w-[28%] h-full border-l border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
+      <div className="w-[26%] h-full border-l border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
         <div className="h-full scale-[0.85] origin-top-left w-[117.6%]">
           <ChatPanel roomCode={roomCode || ''} />
         </div>

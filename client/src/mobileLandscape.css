@@ -1,98 +1,133 @@
 /* mobileLandscape.css */
 /* SCOPED: Only active inside .mobile-landscape-mode wrapper */
-/* Desktop/tablet are NEVER affected */
 
 /* =========================================================
-   1. PLAYER GRAPHICS — horizontally wider, vertically shorter
+   1. PLAYER GRAPHICS & CENTER OF GRAVITY
    ========================================================= */
+/* Player graphic container — move down slightly to lower center of gravity, scale down ~5-8% */
 .mobile-landscape-mode .player-graphic-container {
-    transform: scale(0.48) scaleX(1.2) !important;
+    transform: scale(0.44) scaleX(1.15) !important;
+    bottom: -15px !important; /* Add slight bottom breathing room */
 }
 
-/* Player portrait images — slightly wider & shorter */
+/* Player portrait images */
 .mobile-landscape-mode .player-portrait {
-    transform: scaleX(1.08) scaleY(0.95) !important;
+    transform: scaleX(1.05) scaleY(0.92) !important;
 }
 
-/* Broadcast info bar (name, base price, current bid) — wider, shorter */
+/* Broadcast info bar */
 .mobile-landscape-mode .broadcast-graphic-wrapper {
-    transform: scaleX(1.1) scaleY(0.88) !important;
+    transform: scaleX(1.08) scaleY(0.9) !important;
 }
 
 /* =========================================================
-   2. GLOBAL FONT REDUCTION — all text smaller on mobile
+   2. GLOBAL FONT REDUCTION — readable mobile sizes (slightly larger than previous)
    ========================================================= */
-.mobile-landscape-mode {
-    font-size: 10px !important;
-}
-.mobile-landscape-mode h1 { font-size: 14px !important; }
-.mobile-landscape-mode h2 { font-size: 9px !important; }
-.mobile-landscape-mode h3 { font-size: 14px !important; }
-.mobile-landscape-mode p { font-size: 9px !important; }
-.mobile-landscape-mode span { font-size: inherit; }
-.mobile-landscape-mode .text-xs { font-size: 9px !important; }
-.mobile-landscape-mode .text-sm { font-size: 10px !important; }
-.mobile-landscape-mode .text-base { font-size: 11px !important; }
-.mobile-landscape-mode .text-lg { font-size: 13px !important; }
-.mobile-landscape-mode .text-xl { font-size: 14px !important; }
-.mobile-landscape-mode .text-2xl { font-size: 15px !important; }
+.mobile-landscape-mode { font-size: 11px !important; }
+.mobile-landscape-mode h1 { font-size: 15px !important; }
+.mobile-landscape-mode h2 { font-size: 10px !important; }
+.mobile-landscape-mode h3 { font-size: 15px !important; }
+.mobile-landscape-mode p { font-size: 10px !important; }
+.mobile-landscape-mode .text-xs { font-size: 10px !important; }
+.mobile-landscape-mode .text-sm { font-size: 11px !important; }
+.mobile-landscape-mode .text-base { font-size: 12px !important; }
+.mobile-landscape-mode .text-lg { font-size: 14px !important; }
+.mobile-landscape-mode .text-xl { font-size: 15px !important; }
+.mobile-landscape-mode .text-2xl { font-size: 16px !important; }
 
 /* =========================================================
-   3. COMPRESS TEAM STANDINGS PANEL
+   3. COMPRESS TEAM STANDINGS PANEL (Fit 3-4 cards)
    ========================================================= */
 .mobile-landscape-mode .team-panel-root {
-    padding: 8px 6px !important;
+    padding: 6px 4px !important;
+    padding-top: max(6px, env(safe-area-inset-top)) !important; /* fix cut off header */
 }
 .mobile-landscape-mode .team-panel-root h3 {
-    font-size: 13px !important;
+    font-size: 14px !important;
+    margin-bottom: 2px !important;
 }
 .mobile-landscape-mode .team-panel-card {
-    padding: 6px 8px !important;
-    margin-bottom: 4px !important;
-    border-radius: 8px !important;
+    padding: 4px 6px !important;
+    margin-bottom: 3px !important;
+    border-radius: 6px !important;
 }
 .mobile-landscape-mode .team-panel-card-header {
-    padding: 6px 8px !important;
-    font-size: 9px !important;
+    padding: 4px 6px !important;
 }
 .mobile-landscape-mode .team-panel-logo {
-    width: 14px !important;
-    height: 14px !important;
+    width: 16px !important;
+    height: 16px !important;
 }
 .mobile-landscape-mode .team-panel-stats {
-    font-size: 8px !important;
-    margin-top: 2px !important;
-}
-.mobile-landscape-mode .team-panel-purse {
-    font-size: 10px !important;
+    margin-top: 1px !important;
 }
 
 /* =========================================================
    4. COMPRESS CHAT PANEL
    ========================================================= */
 .mobile-landscape-mode .chat-panel-root {
-    padding: 6px 4px !important;
+    padding: 4px !important;
+    padding-top: max(6px, env(safe-area-inset-top)) !important;
 }
 .mobile-landscape-mode .chat-message-container {
-    padding: 6px !important;
-    gap: 4px !important;
+    padding: 4px !important;
+    gap: 3px !important;
 }
 .mobile-landscape-mode .chat-message-item {
-    padding: 4px 6px !important;
+    padding: 3px 5px !important;
     border-radius: 6px !important;
-    font-size: 9px !important;
+}
+.mobile-landscape-mode form {
+    padding: 4px !important;
+}
+.mobile-landscape-mode input {
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    height: 28px !important;
+}
+.mobile-landscape-mode button[type="submit"] {
+    padding: 4px !important;
+    border-radius: 6px !important;
+    height: 28px !important;
+    width: 28px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* =========================================================
-   5. BID BUTTON — compact but thumb-friendly
+   5. BID BUTTON & CENTER LOGO OVERLAYS
    ========================================================= */
 .mobile-landscape-mode .bid-btn {
-    box-shadow: 0 0 8px rgba(0,229,255,0.3) !important;
+    box-shadow: 0 0 6px rgba(0,229,255,0.2) !important;
+    height: 32px !important;
+    padding: 0 16px !important;
+}
+.mobile-landscape-mode .bottom-controls-area .bg-\[\#001120\]\/90 {
+    box-shadow: 0 0 4px rgba(0,229,255,0.15) !important;
+    border-width: 1px !important;
+    width: 32px !important;
+    height: 32px !important;
 }
 
 /* =========================================================
-   6. HEADER
+   6. STATS PANEL READABILITY
+   ========================================================= */
+.mobile-landscape-mode .stats-strip {
+    background-color: rgba(0, 17, 32, 0.95) !important; /* Increase opacity */
+    box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.4), 0 10px 20px rgba(0, 0, 0, 0.9) !important;
+}
+.mobile-landscape-mode .stats-strip .text-white {
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9) !important;
+    color: #fff !important;
+}
+.mobile-landscape-mode .stats-strip .text-gray-400 {
+    color: rgba(255, 255, 255, 0.8) !important; /* brighter labels */
+}
+
+/* =========================================================
+   7. HEADER
    ========================================================= */
 .mobile-landscape-mode .top-header-overlay {
-    top: 3px !important;
+    top: max(3px, env(safe-area-inset-top)) !important;
 }
