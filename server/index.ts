@@ -82,6 +82,7 @@ interface Room {
 }
 
 const rooms = new Map<string, Room>();
+const reconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
 const app = express();
 app.use(cors());
@@ -401,6 +402,14 @@ io.on('connection', (socket: Socket) => {
       room.deletionTimeout = null;
     }
 
+    // Clear reconnect timeout if any
+    const key = `${roomCode}_${playerName}`;
+    const pendingTimeout = reconnectTimeouts.get(key);
+    if (pendingTimeout) {
+      clearTimeout(pendingTimeout);
+      reconnectTimeouts.delete(key);
+    }
+
     const existingPlayerIndex = room.state.players.findIndex(p => p.name === playerName);
     const isRejoining = existingPlayerIndex !== -1 && room.state.players[existingPlayerIndex].socketId === '';
 
@@ -412,6 +421,10 @@ io.on('connection', (socket: Socket) => {
       oldPlayer.socketId = socket.id;
       if (oldPlayer.teamId) {
         room.state.teams[oldPlayer.teamId].ownerId = socket.id;
+        room.state.teams[oldPlayer.teamId].ownerName = oldPlayer.name;
+      }
+      if (oldPlayer.isHost) {
+        room.state.hostId = socket.id;
       }
     } else {
       room.state.players.push({ socketId: socket.id, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
@@ -618,31 +631,88 @@ io.on('connection', (socket: Socket) => {
       if (playerIndex !== -1) {
         const player = room.state.players[playerIndex];
 
-        if (isDisconnect && room.state.isLocked) {
+        if (isDisconnect) {
+          // 1. Mark socket as empty
           player.socketId = '';
           if (player.teamId) {
             room.state.teams[player.teamId].ownerId = null;
           }
 
-          const allDisconnected = room.state.players.every(p => p.socketId === '');
-          if (allDisconnected) {
-            room.deletionTimeout = setTimeout(() => {
-              const checkRoom = rooms.get(roomCode);
-              if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
-                clearAllTimers(checkRoom);
-                rooms.delete(roomCode);
-              }
-            }, 60000);
-          } else if (player.isHost) {
-            const nextHost = room.state.players.find(p => p.socketId !== '');
-            if (nextHost) {
-              player.isHost = false;
-              nextHost.isHost = true;
-              room.state.hostId = nextHost.socketId;
-            }
-          }
+          // Emit immediately so other players see they went offline
           emitRoomState(roomCode);
+
+          // 2. Set up the reconnect grace period (10 seconds)
+          const key = `${roomCode}_${player.name}`;
+          
+          // Clear any existing timeout for this player
+          const oldTimeout = reconnectTimeouts.get(key);
+          if (oldTimeout) clearTimeout(oldTimeout);
+
+          const timeout = setTimeout(() => {
+            reconnectTimeouts.delete(key);
+
+            // Fetch the room and player again, in case the room was deleted or player state changed
+            const currentRoom = rooms.get(roomCode);
+            if (!currentRoom) return;
+
+            const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.name === player.name);
+            if (currentPlayerIndex === -1) return;
+
+            const currentPlayer = currentRoom.state.players[currentPlayerIndex];
+            if (currentPlayer.socketId !== '') {
+              // They reconnected, do nothing!
+              return;
+            }
+
+            // They did not reconnect in time. Handle actual leave!
+            const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
+
+            // Handle Host Transfer if they were the host
+            if (currentPlayer.isHost) {
+              currentPlayer.isHost = false;
+              if (activePlayers.length > 0) {
+                const nextHost = activePlayers[0];
+                nextHost.isHost = true;
+                currentRoom.state.hostId = nextHost.socketId;
+              }
+            }
+
+            // Cleanup player if room is NOT locked
+            if (!currentRoom.state.isLocked) {
+              if (currentPlayer.teamId) {
+                currentRoom.state.teams[currentPlayer.teamId].ownerId = null;
+                currentRoom.state.teams[currentPlayer.teamId].ownerName = null;
+              }
+              currentRoom.state.players.splice(currentPlayerIndex, 1);
+            }
+
+            // Handle room deletion if no active players are left
+            const remainingActive = currentRoom.state.players.filter(p => p.socketId !== '');
+            if (remainingActive.length === 0) {
+              if (currentRoom.deletionTimeout) clearTimeout(currentRoom.deletionTimeout);
+              currentRoom.deletionTimeout = setTimeout(() => {
+                const checkRoom = rooms.get(roomCode);
+                if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
+                  clearAllTimers(checkRoom);
+                  rooms.delete(roomCode);
+                }
+              }, 60000);
+            }
+
+            emitRoomState(roomCode);
+          }, 10000);
+
+          reconnectTimeouts.set(key, timeout);
           return;
+        }
+
+        // --- Explicit Leave Room (socket.emit('leave_room')) ---
+        // Cancel any pending reconnect timeout
+        const key = `${roomCode}_${player.name}`;
+        const pending = reconnectTimeouts.get(key);
+        if (pending) {
+          clearTimeout(pending);
+          reconnectTimeouts.delete(key);
         }
 
         if (player.teamId) {

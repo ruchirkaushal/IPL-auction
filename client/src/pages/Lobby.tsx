@@ -18,11 +18,16 @@ export default function Lobby() {
 
   useEffect(() => {
     if (socket && !roomState) {
+      const playerName = localStorage.getItem('playerName');
+      if (!playerName) {
+        navigate(`/?roomCode=${roomCode}`);
+        return;
+      }
       const timer = setTimeout(() => {
         if (!roomState) {
           navigate(`/?roomCode=${roomCode}`);
         }
-      }, 1000);
+      }, 8000);
       return () => clearTimeout(timer);
     }
   }, [socket, roomState, roomCode, navigate]);

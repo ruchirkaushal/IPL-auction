@@ -34,11 +34,16 @@ export default function Summary() {
 
   useEffect(() => {
     if (socket && (!roomState || allPlayers.length === 0)) {
+      const playerName = localStorage.getItem('playerName');
+      if (!playerName) {
+        navigate(`/?roomCode=${roomCode}`);
+        return;
+      }
       const timer = setTimeout(() => {
         if (!roomState) {
           navigate(`/?roomCode=${roomCode}`);
         }
-      }, 1000);
+      }, 8000);
       return () => clearTimeout(timer);
     }
   }, [socket, roomState, allPlayers.length, roomCode, navigate]);

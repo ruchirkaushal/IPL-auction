@@ -73,7 +73,23 @@ export const useSocket = () => {
     newSocket.on('room_state_update', (state: RoomState) => {
       setRoomState(state);
       const me = state.players.find(p => p.socketId === newSocket.id);
-      if (me) setMyTeamId(me.teamId);
+      if (me) {
+        setMyTeamId(me.teamId);
+        localStorage.setItem('ipl_auction_room_code', state.roomCode);
+        localStorage.setItem('playerName', me.name);
+        if (me.teamId) {
+          localStorage.setItem('ipl_auction_selected_team', me.teamId);
+        } else {
+          localStorage.removeItem('ipl_auction_selected_team');
+        }
+        localStorage.setItem('ipl_auction_is_host', me.isHost ? 'true' : 'false');
+        localStorage.setItem('ipl_auction_session_state', JSON.stringify({
+          roomId: state.roomCode,
+          username: me.name,
+          selectedTeam: me.teamId,
+          isHost: me.isHost
+        }));
+      }
     });
 
     newSocket.on('timer_update', (payload: TimerUpdatePayload) => {
@@ -134,6 +150,10 @@ export const useSocket = () => {
     });
 
     newSocket.on('kicked', () => {
+      localStorage.removeItem('ipl_auction_room_code');
+      localStorage.removeItem('ipl_auction_selected_team');
+      localStorage.removeItem('ipl_auction_is_host');
+      localStorage.removeItem('ipl_auction_session_state');
       toast.error('You have been kicked from the room by the host.', {
         duration: 5000,
         style: { borderRadius: '12px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b' }
@@ -202,6 +222,10 @@ export const useSocket = () => {
   }, [socket]);
 
   const leaveRoom = useCallback(() => {
+    localStorage.removeItem('ipl_auction_room_code');
+    localStorage.removeItem('ipl_auction_selected_team');
+    localStorage.removeItem('ipl_auction_is_host');
+    localStorage.removeItem('ipl_auction_session_state');
     if (socket) socket.emit('leave_room');
   }, [socket]);
 
