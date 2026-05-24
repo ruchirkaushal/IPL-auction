@@ -220,14 +220,14 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
                    e.currentTarget.onerror = null;
                    e.currentTarget.src = 'https://documents.iplt20.com/ipl/assets/images/Default-Men.png';
                  }}
-                 className="absolute bottom-0 w-full h-full object-contain object-bottom drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] transition-opacity duration-300"
+                 className="player-portrait absolute bottom-0 w-full h-full object-contain object-bottom drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] transition-opacity duration-300"
                />
                <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-10" />
             </div>
           </div>
 
           {/* BROADCAST INFO GRAPHIC WRAPPER */}
-          <div className="relative z-20 w-[170%] max-w-[2500px] flex flex-col items-center filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.85)]">
+          <div className="broadcast-graphic-wrapper relative z-20 w-[170%] max-w-[2500px] flex flex-col items-center filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.85)]">
              
              {/* PANELS ROW */}
              <div className="flex w-full justify-center items-end h-[120px] gap-[4px] relative">

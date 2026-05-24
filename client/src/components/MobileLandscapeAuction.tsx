@@ -55,10 +55,10 @@ export default function MobileLandscapeAuction({
         </div>
       </div>
 
-      {/* Center panel: Auction Stage */}
-      <div className="center-auction-stage w-[44%] h-full flex flex-col relative overflow-hidden bg-black">
+      {/* Center panel: Auction Stage — video fills full height */}
+      <div className="center-auction-stage w-[44%] h-full relative overflow-hidden bg-black">
 
-        {/* Floating top header - absolute, doesn't affect flow */}
+        {/* Floating top header — absolute, zero layout impact */}
         <div className="top-header-overlay absolute top-2 left-2 right-2 z-40 flex justify-between items-center pointer-events-none">
           <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-lg border border-white/10 pointer-events-auto">
             <img 
@@ -96,68 +96,58 @@ export default function MobileLandscapeAuction({
           </div>
         </div>
 
-        {/* Small top spacer — pushes broadcast block toward lower-center */}
-        <div className="flex-[0.15]" />
+        {/* Video — fills the ENTIRE center column */}
+        <div className="video-wrapper absolute inset-0 z-10">
+          <VideoPlayer
+            videoRef={videoManager.videoRef}
+            videoPhase={videoManager.videoPhase}
+            introFrozen={videoManager.introFrozen}
+            onGraphicsReady={videoManager.markGraphicsReady}
+          />
+        </div>
 
-        {/* === UNIFIED BROADCAST BLOCK === */}
-        {/* Video + bid controls stacked as one cinematic unit, bottom-anchored */}
-        <div className="flex flex-col w-full flex-1 min-h-0">
-
-          {/* Video Area — takes all available height */}
-          <div className="video-wrapper w-full flex-1 relative min-h-0">
-            <div className="absolute inset-0">
-              <VideoPlayer
-                videoRef={videoManager.videoRef}
-                videoPhase={videoManager.videoPhase}
-                introFrozen={videoManager.introFrozen}
-                onGraphicsReady={videoManager.markGraphicsReady}
-              />
-            </div>
+        {/* Bid controls — absolute overlay at the very bottom of video */}
+        {/* Overlaps video — visually connected, no empty space below */}
+        <div className="bottom-controls-area absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none">
+          {/* Leading team logo */}
+          <div className="w-10 h-10 flex items-center justify-center pointer-events-auto">
+            {roomState.auction.phase === 'bidding' && highestBidderId && (
+              <div className="w-9 h-9 bg-[#001120]/90 border border-[#00e5ff] rounded-lg flex items-center justify-center shadow-[0_0_8px_rgba(0,229,255,0.3)]">
+                <img
+                  src={TEAMS[highestBidderId as keyof typeof TEAMS]?.logoUrl}
+                  className="w-[75%] h-[75%] object-contain"
+                  alt={highestBidderId}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Bid controls strip — flush against video bottom, no gap */}
-          <div className="bottom-controls-area w-full flex-none flex items-center justify-between px-4 py-2 bg-gradient-to-t from-black/80 to-transparent">
-            {/* Leading team logo */}
-            <div className="w-10 h-10 flex items-center justify-center">
-              {roomState.auction.phase === 'bidding' && highestBidderId && (
-                <div className="w-9 h-9 bg-[#001120]/90 border border-[#00e5ff] rounded-lg flex items-center justify-center shadow-[0_0_8px_rgba(0,229,255,0.25)]">
-                  <img
-                    src={TEAMS[highestBidderId as keyof typeof TEAMS]?.logoUrl}
-                    className="w-[75%] h-[75%] object-contain"
-                    alt={highestBidderId}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* BID button */}
-            <div className="z-30">
-              {roomState.auction.phase === 'bidding' && (
-                <button
-                  onClick={() => {
-                    if (!roomCode || !canUserBid) return;
-                    actions.placeBid(roomCode);
-                  }}
-                  disabled={!canUserBid}
-                  className={`
-                    bid-btn w-24 h-9 rounded-lg font-black text-xs tracking-widest uppercase 
-                    transition-all active:scale-95 border
-                    ${canUserBid
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_10px_rgba(0,229,255,0.35)] border-[#00e5ff]'
-                      : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
-                    }
-                  `}
-                >
-                  BID
-                </button>
-              )}
-            </div>
-
-            {/* Right placeholder for balance */}
-            <div className="w-10 h-10" />
+          {/* BID button */}
+          <div className="z-30 pointer-events-auto">
+            {roomState.auction.phase === 'bidding' && (
+              <button
+                onClick={() => {
+                  if (!roomCode || !canUserBid) return;
+                  actions.placeBid(roomCode);
+                }}
+                disabled={!canUserBid}
+                className={`
+                  bid-btn w-24 h-9 rounded-lg font-black text-xs tracking-widest uppercase 
+                  transition-all active:scale-95 border
+                  ${canUserBid
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(0,229,255,0.4)] border-[#00e5ff]'
+                    : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
+                  }
+                `}
+              >
+                BID
+              </button>
+            )}
           </div>
 
-        </div>{/* end unified broadcast block */}
+          {/* Balance placeholder */}
+          <div className="w-10 h-10" />
+        </div>
 
         {/* Pause Overlay */}
         {(roomState.auction.isPaused || isLocalPaused) && (

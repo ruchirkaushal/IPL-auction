@@ -1,30 +1,50 @@
 /* mobileLandscape.css */
-/* ONLY loaded and scoped within the mobile landscape container */
+/* SCOPED: Only active inside .mobile-landscape-mode wrapper */
+/* Desktop/tablet are NEVER affected */
 
-/* 1. Scale down player graphics & remove empty space */
-.mobile-landscape-mode .video-player-container .player-graphic-container {
-    transform: scale(0.46) !important;
-    bottom: -40px !important;
+/* =========================================================
+   1. PLAYER GRAPHICS — horizontally wider, vertically shorter
+   ========================================================= */
+.mobile-landscape-mode .player-graphic-container {
+    transform: scale(0.48) scaleX(1.2) !important;
 }
 
-/* 2. Reduce BID button size & tighten bottom controls */
-.mobile-landscape-mode .bottom-controls-area {
-    padding-bottom: 2px !important;
+/* Player portrait images — slightly wider & shorter */
+.mobile-landscape-mode .player-portrait {
+    transform: scaleX(1.08) scaleY(0.95) !important;
 }
-.mobile-landscape-mode .bid-btn {
-    width: 90px !important;
-    height: 36px !important;
+
+/* Broadcast info bar (name, base price, current bid) — wider, shorter */
+.mobile-landscape-mode .broadcast-graphic-wrapper {
+    transform: scaleX(1.1) scaleY(0.88) !important;
+}
+
+/* =========================================================
+   2. GLOBAL FONT REDUCTION — all text smaller on mobile
+   ========================================================= */
+.mobile-landscape-mode {
     font-size: 10px !important;
-    box-shadow: 0 0 8px rgba(0,229,255,0.3) !important;
-    border-radius: 8px !important;
 }
+.mobile-landscape-mode h1 { font-size: 14px !important; }
+.mobile-landscape-mode h2 { font-size: 9px !important; }
+.mobile-landscape-mode h3 { font-size: 14px !important; }
+.mobile-landscape-mode p { font-size: 9px !important; }
+.mobile-landscape-mode span { font-size: inherit; }
+.mobile-landscape-mode .text-xs { font-size: 9px !important; }
+.mobile-landscape-mode .text-sm { font-size: 10px !important; }
+.mobile-landscape-mode .text-base { font-size: 11px !important; }
+.mobile-landscape-mode .text-lg { font-size: 13px !important; }
+.mobile-landscape-mode .text-xl { font-size: 14px !important; }
+.mobile-landscape-mode .text-2xl { font-size: 15px !important; }
 
-/* 3. Compress Standings panel */
+/* =========================================================
+   3. COMPRESS TEAM STANDINGS PANEL
+   ========================================================= */
 .mobile-landscape-mode .team-panel-root {
     padding: 8px 6px !important;
 }
 .mobile-landscape-mode .team-panel-root h3 {
-    font-size: 16px !important;
+    font-size: 13px !important;
 }
 .mobile-landscape-mode .team-panel-card {
     padding: 6px 8px !important;
@@ -32,48 +52,47 @@
     border-radius: 8px !important;
 }
 .mobile-landscape-mode .team-panel-card-header {
-    font-size: 10px !important;
+    padding: 6px 8px !important;
+    font-size: 9px !important;
 }
 .mobile-landscape-mode .team-panel-logo {
     width: 14px !important;
     height: 14px !important;
 }
 .mobile-landscape-mode .team-panel-stats {
-    font-size: 9px !important;
+    font-size: 8px !important;
     margin-top: 2px !important;
 }
 .mobile-landscape-mode .team-panel-purse {
-    font-size: 11px !important;
+    font-size: 10px !important;
 }
 
-/* 4. Compress Chat panel */
+/* =========================================================
+   4. COMPRESS CHAT PANEL
+   ========================================================= */
 .mobile-landscape-mode .chat-panel-root {
-    padding: 8px 6px !important;
+    padding: 6px 4px !important;
 }
 .mobile-landscape-mode .chat-message-container {
-    padding: 8px !important;
-}
-.mobile-landscape-mode .chat-message-container > div {
-    margin-bottom: 4px !important;
+    padding: 6px !important;
+    gap: 4px !important;
 }
 .mobile-landscape-mode .chat-message-item {
-    padding: 6px 8px !important;
-    border-radius: 8px !important;
-}
-.mobile-landscape-mode .chat-message-item .text-xs,
-.mobile-landscape-mode .chat-message-item.text-xs {
+    padding: 4px 6px !important;
+    border-radius: 6px !important;
     font-size: 9px !important;
 }
-.mobile-landscape-mode .chat-message-item .text-sm {
-    font-size: 11px !important;
+
+/* =========================================================
+   5. BID BUTTON — compact but thumb-friendly
+   ========================================================= */
+.mobile-landscape-mode .bid-btn {
+    box-shadow: 0 0 8px rgba(0,229,255,0.3) !important;
 }
 
-/* 5. Center Container & Video adjustments — flex-1 fills space naturally now */
-.mobile-landscape-mode .center-auction-stage {
-    justify-content: flex-end !important;
-}
-
-/* 6. Header adjustments */
+/* =========================================================
+   6. HEADER
+   ========================================================= */
 .mobile-landscape-mode .top-header-overlay {
-    top: 4px !important;
+    top: 3px !important;
 }
