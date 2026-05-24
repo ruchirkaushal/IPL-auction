@@ -68,13 +68,9 @@
     font-size: 11px !important;
 }
 
-/* 5. Center Container & Video adjustments */
+/* 5. Center Container & Video adjustments — flex-1 fills space naturally now */
 .mobile-landscape-mode .center-auction-stage {
     justify-content: flex-end !important;
-}
-.mobile-landscape-mode .video-wrapper {
-    height: 48vh !important;
-    margin-top: 0px !important;
 }
 
 /* 6. Header adjustments */
