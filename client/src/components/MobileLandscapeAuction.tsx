@@ -5,6 +5,7 @@ import VideoPlayer from './VideoPlayer';
 import ChatPanel from './ChatPanel';
 import PlayerDatabase from './PlayerDatabase';
 import { TEAMS } from '../constants/teams';
+import '../mobileLandscape.css';
 
 interface AuctionLayoutProps {
   roomCode: string;
@@ -45,7 +46,7 @@ export default function MobileLandscapeAuction({
   const [isLocalPaused, setIsLocalPaused] = useState(false);
 
   return (
-    <div className="flex flex-row w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30 text-xs">
+    <div className="mobile-landscape-mode flex flex-row w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30 text-xs">
 
       {/* Left panel: Team Standings (Compact) */}
       <div className="w-[28%] h-full border-r border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
@@ -55,10 +56,10 @@ export default function MobileLandscapeAuction({
       </div>
 
       {/* Center panel: Auction Stage */}
-      <div className="w-[44%] h-full flex flex-col relative overflow-hidden bg-black">
+      <div className="center-auction-stage w-[44%] h-full flex flex-col relative overflow-hidden bg-black">
 
         {/* Floating top header */}
-        <div className="absolute top-2 left-2 right-2 z-40 flex justify-between items-center pointer-events-none">
+        <div className="top-header-overlay absolute top-2 left-2 right-2 z-40 flex justify-between items-center pointer-events-none">
           <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-lg border border-white/10 pointer-events-auto">
             <img 
               src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/9c3773cb-5629-4145-b044-4ef6f9090376/df0pxkt-cbc20ad7-b514-43f5-99bd-31a3a351520a.png/v1/fill/w_927,h_862/tata_ipl_auction_logo_by_harshmore7781_df0pxkt-pre.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTA4MCIsInBhdGgiOiIvZi85YzM3NzNjYi01NjI5LTQxNDUtYjA0NC00ZWY2ZjkwOTAzNzYvZGYwcHhrdC1jYmMyMGFkNy1iNTE0LTQzZjUtOTliZC0zMWEzYTM1MTUyMGEucG5nIiwid2lkdGgiOiI8PTExNjEifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.2g756-i28rBf1t-DSn5g6_qN8vYzoI_FooR503fHiPA"
@@ -96,7 +97,7 @@ export default function MobileLandscapeAuction({
         </div>
 
         {/* Video Area */}
-        <div className="w-full h-[45vh] relative mt-10">
+        <div className="video-wrapper w-full h-[45vh] relative mt-10">
           <div className="absolute inset-0 scale-[0.85] origin-top">
             <VideoPlayer
               videoRef={videoManager.videoRef}
@@ -108,7 +109,7 @@ export default function MobileLandscapeAuction({
         </div>
 
         {/* Bottom controls area */}
-        <div className="flex-grow relative flex items-center justify-between px-6 pb-2">
+        <div className="bottom-controls-area flex-grow relative flex items-center justify-between px-6 pb-2">
           {/* Leading team logo */}
           <div className="w-16 h-16 flex items-center justify-center">
             {roomState.auction.phase === 'bidding' && highestBidderId && (
@@ -132,7 +133,7 @@ export default function MobileLandscapeAuction({
                 }}
                 disabled={!canUserBid}
                 className={`
-                  w-32 h-12 rounded-xl font-black text-sm tracking-widest uppercase 
+                  bid-btn w-32 h-12 rounded-xl font-black text-sm tracking-widest uppercase 
                   transition-all active:scale-95 border
                   ${canUserBid
                     ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_15px_rgba(0,229,255,0.4)] border-[#00e5ff]'

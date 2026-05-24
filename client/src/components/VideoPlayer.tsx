@@ -168,7 +168,7 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
   };
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden select-none">
+    <div className="video-player-container relative w-full h-full bg-black overflow-hidden select-none">
       {/* LAYER 1: VIDEO BACKGROUND */}
       <div className="absolute inset-0 z-0 bg-black">
         <video 
@@ -194,7 +194,7 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
       {/* LAYER 2: PLAYER GRAPHIC OVERLAY */}
       {currentPlayer && (
         <div 
-          className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-end pb-0 transform scale-[0.62] origin-bottom"
+          className="player-graphic-container absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-end pb-0 transform scale-[0.62] origin-bottom"
           style={{
             opacity: showPlayerInfo ? 1 : 0,
             visibility: showPlayerInfo ? 'visible' : 'hidden',

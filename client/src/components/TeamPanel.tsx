@@ -31,7 +31,7 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col p-6 bg-[#0a0a0a] border-r border-white/5">
+    <div className="team-panel-root h-full flex flex-col p-6 bg-[#0a0a0a] border-r border-white/5">
       <div className="mb-6 flex justify-between items-end">
         <div>
           <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#00e5ff] mb-1">Standings</h2>
@@ -60,14 +60,14 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
           };
 
           return (
-            <div 
-              key={team.teamId} 
-              className={`relative group rounded-2xl transition-all duration-300 border overflow-hidden ${
-                team.status === 'leading' ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
-                team.status === 'passed' ? 'bg-red-500/5 border-red-500/20 opacity-60' : 
-                'bg-[#121212] border-white/5 hover:border-white/10'
-              }`}
-            >
+              <div 
+                key={team.teamId} 
+                className={`team-panel-card relative group rounded-2xl transition-all duration-300 border overflow-hidden ${
+                  team.status === 'leading' ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
+                  team.status === 'passed' ? 'bg-red-500/5 border-red-500/20 opacity-60' : 
+                  'bg-[#121212] border-white/5 hover:border-white/10'
+                }`}
+              >
               {/* Colored left bar for team identity */}
               <div 
                 className="absolute left-0 top-0 bottom-0 w-[4px]" 
@@ -77,14 +77,14 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
               {/* Card Header (Clickable to Toggle Dropdown) */}
               <div 
                 onClick={() => toggleTeam(team.teamId)}
-                className="p-4 pl-5 cursor-pointer flex flex-col select-none"
+                className="team-panel-card-header p-4 pl-5 cursor-pointer flex flex-col select-none"
               >
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-2">
                     <img 
                       src={teamInfo.logoUrl} 
                       alt={teamInfo.name} 
-                      className="w-6 h-6 object-contain"
+                      className="team-panel-logo w-6 h-6 object-contain"
                     />
                     <p className="font-black text-white tracking-tight text-base uppercase">{teamInfo.name}</p>
                     {team.status === 'leading' && (
@@ -105,7 +105,7 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
                   </svg>
                 </div>
 
-                <div className="flex justify-between items-center text-xs mt-2 text-gray-400">
+                <div className="team-panel-stats flex justify-between items-center text-xs mt-2 text-gray-400">
                   <span className="text-[10px] font-medium tracking-wide">
                     Manager: <span className="text-white font-bold">{team.ownerName || 'AI Engine'}</span>
                   </span>
@@ -116,7 +116,7 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
                   <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Purse Remaining</span>
-                  <span className="font-black text-[#F5A623] tracking-tighter text-sm font-outfit">
+                  <span className="team-panel-purse font-black text-[#F5A623] tracking-tighter text-sm font-outfit">
                     {formatAuctionMoney(team.purseRemaining)}
                   </span>
                 </div>

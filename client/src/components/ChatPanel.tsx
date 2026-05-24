@@ -42,7 +42,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] border-l border-white/5">
+    <div className="chat-panel-root h-full flex flex-col bg-[#0a0a0a] border-l border-white/5">
       {/* Panel Header */}
       <div className="p-5 border-b border-white/5 flex items-center justify-between">
         <div>
@@ -59,7 +59,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
       <div 
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-grow overflow-y-auto custom-scrollbar p-5 space-y-3.5"
+        className="chat-message-container flex-grow overflow-y-auto custom-scrollbar p-5 space-y-3.5"
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30 select-none px-4">
@@ -76,7 +76,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
               return (
                 <div 
                   key={msg.id} 
-                  className="flex items-center gap-3 py-2 px-3.5 rounded-xl bg-white/[0.02] border transition-all duration-300"
+                  className="chat-message-item flex items-center gap-3 py-2 px-3.5 rounded-xl bg-white/[0.02] border transition-all duration-300"
                   style={{ borderColor: team ? `${team.primaryColor}25` : '#ffffff10' }}
                 >
                   {team && (
@@ -103,7 +103,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
               return (
                 <div 
                   key={msg.id} 
-                  className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border transition-all duration-300"
+                  className="chat-message-item flex items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border transition-all duration-300"
                   style={{ 
                     borderColor: team ? `${team.primaryColor}50` : '#10B98130',
                     borderLeft: `5px solid ${team?.primaryColor || '#10B981'}`
@@ -136,7 +136,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
               return (
                 <div 
                   key={msg.id} 
-                  className="flex items-center justify-between p-3 rounded-xl bg-red-500/5 border border-red-500/10 border-l-[5px] border-l-red-500/50"
+                  className="chat-message-item flex items-center justify-between p-3 rounded-xl bg-red-500/5 border border-red-500/10 border-l-[5px] border-l-red-500/50"
                 >
                   <div className="text-xs">
                     <span className="text-red-400/90 font-black tracking-wider uppercase text-[10px] block mb-0.5">Passed</span>
@@ -175,7 +175,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
                   )}
                 </div>
                 <div 
-                  className={`py-2 px-3.5 rounded-2xl text-xs break-all shadow-md leading-relaxed ${
+                  className={`chat-message-item py-2 px-3.5 rounded-2xl text-xs break-all shadow-md leading-relaxed ${
                     isMe 
                       ? 'bg-blue-600 text-white rounded-tr-none' 
                       : 'bg-[#181818] text-white/95 rounded-tl-none border border-white/5'

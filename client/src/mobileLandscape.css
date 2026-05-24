@@ -1,0 +1,83 @@
+/* mobileLandscape.css */
+/* ONLY loaded and scoped within the mobile landscape container */
+
+/* 1. Scale down player graphics & remove empty space */
+.mobile-landscape-mode .video-player-container .player-graphic-container {
+    transform: scale(0.46) !important;
+    bottom: -40px !important;
+}
+
+/* 2. Reduce BID button size & tighten bottom controls */
+.mobile-landscape-mode .bottom-controls-area {
+    padding-bottom: 2px !important;
+}
+.mobile-landscape-mode .bid-btn {
+    width: 90px !important;
+    height: 36px !important;
+    font-size: 10px !important;
+    box-shadow: 0 0 8px rgba(0,229,255,0.3) !important;
+    border-radius: 8px !important;
+}
+
+/* 3. Compress Standings panel */
+.mobile-landscape-mode .team-panel-root {
+    padding: 8px 6px !important;
+}
+.mobile-landscape-mode .team-panel-root h3 {
+    font-size: 16px !important;
+}
+.mobile-landscape-mode .team-panel-card {
+    padding: 6px 8px !important;
+    margin-bottom: 4px !important;
+    border-radius: 8px !important;
+}
+.mobile-landscape-mode .team-panel-card-header {
+    font-size: 10px !important;
+}
+.mobile-landscape-mode .team-panel-logo {
+    width: 14px !important;
+    height: 14px !important;
+}
+.mobile-landscape-mode .team-panel-stats {
+    font-size: 9px !important;
+    margin-top: 2px !important;
+}
+.mobile-landscape-mode .team-panel-purse {
+    font-size: 11px !important;
+}
+
+/* 4. Compress Chat panel */
+.mobile-landscape-mode .chat-panel-root {
+    padding: 8px 6px !important;
+}
+.mobile-landscape-mode .chat-message-container {
+    padding: 8px !important;
+}
+.mobile-landscape-mode .chat-message-container > div {
+    margin-bottom: 4px !important;
+}
+.mobile-landscape-mode .chat-message-item {
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+}
+.mobile-landscape-mode .chat-message-item .text-xs,
+.mobile-landscape-mode .chat-message-item.text-xs {
+    font-size: 9px !important;
+}
+.mobile-landscape-mode .chat-message-item .text-sm {
+    font-size: 11px !important;
+}
+
+/* 5. Center Container & Video adjustments */
+.mobile-landscape-mode .center-auction-stage {
+    justify-content: flex-end !important;
+}
+.mobile-landscape-mode .video-wrapper {
+    height: 48vh !important;
+    margin-top: 0px !important;
+}
+
+/* 6. Header adjustments */
+.mobile-landscape-mode .top-header-overlay {
+    top: 4px !important;
+}
