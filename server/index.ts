@@ -949,11 +949,9 @@ io.on('connection', (socket: Socket) => {
 
         if (isDisconnect) {
           // 1. Mark socket as empty
+          // 1. Mark socket as empty but preserve team ownership during grace period
           player.socketId = '';
-          if (player.teamId && !room.state.isLocked) {
-            room.state.teams[player.teamId].ownerId = null;
-            room.state.teams[player.teamId].ownerName = null;
-          }
+          // We DO NOT clear ownerId here anymore. This prevents "team stealing" during a temporary refresh/disconnect.
 
           // Emit immediately so other players see they went offline
           emitRoomState(roomCode);
@@ -1023,7 +1021,7 @@ io.on('connection', (socket: Socket) => {
             }
 
             emitRoomState(roomCode);
-          }, 120000); // 120 seconds grace period
+          }, 300000); // 5 minutes (300s) grace period instead of 120s
 
           reconnectTimeouts.set(key, timeout);
           return;
@@ -1063,12 +1061,23 @@ io.on('connection', (socket: Socket) => {
       }
 
       const activePlayers = room.state.players.filter(p => p.socketId !== '');
-      if (activePlayers.length === 0) {
+      if (room.state.players.length === 0) {
         clearAllTimers(room);
         // Increment generation number before deletion to invalidate all stale references
         room.roomGeneration++;
         rooms.delete(roomCode);
-        console.log(`[Room] Room ${roomCode} deleted immediately (no active players). Generation: ${room.roomGeneration - 1}`);
+        console.log(`[Room] Room ${roomCode} deleted immediately (0 players left). Generation: ${room.roomGeneration - 1}`);
+      } else if (activePlayers.length === 0) {
+        // If all remaining players are disconnected, start the deletion timeout rather than instant kill
+        if (room.deletionTimeout) clearTimeout(room.deletionTimeout);
+        room.deletionTimeout = setTimeout(() => {
+          const checkRoom = rooms.get(roomCode);
+          if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
+            clearAllTimers(checkRoom);
+            checkRoom.roomGeneration++;
+            rooms.delete(roomCode);
+          }
+        }, 3600000);
       } else if (player.isHost) {
         const nextHost = activePlayers[0];
         nextHost.isHost = true;
