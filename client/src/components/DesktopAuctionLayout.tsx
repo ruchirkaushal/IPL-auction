@@ -110,6 +110,21 @@ export default function DesktopAuctionLayout({
                 {roomState.auction.isPaused ? 'play_arrow' : 'pause'}
               </span>
             </button>
+            <button
+              onClick={() => {
+                if (isHost) {
+                  actions.skipCurrentSet(roomCode || '');
+                } else {
+                  toast.error('Only the Host can skip the current set!', {
+                    style: { borderRadius: '12px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b' }
+                  });
+                }
+              }}
+              className="w-10 h-10 flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full border border-yellow-500/20 transition-all hover:scale-110 shadow-lg group"
+              title="Skip Current Set"
+            >
+              <span className="material-symbols-outlined text-yellow-300 text-[20px] group-hover:text-yellow-200 transition-colors">fast_forward</span>
+            </button>
           </div>
         </div>
 
