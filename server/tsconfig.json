@@ -16,6 +16,8 @@
   ],
   "exclude": [
     "scan-duplicates.ts",
-    "../shared/playerDuplicateDetectorExamples.ts"
+    "../shared/playerDuplicateDetectorExamples.ts",
+    "_dormant_scaffold/**/*",
+    "test/**/*"
   ]
 }
