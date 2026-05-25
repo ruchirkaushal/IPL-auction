@@ -105,19 +105,6 @@ export default function MobileLandscapeAuction({
                 {roomState.auction.isPaused ? 'play_arrow' : 'pause'}
               </span>
             </button>
-            <button
-              onClick={() => {
-                if (isHost) {
-                  actions.skipCurrentSet(roomCode || '');
-                } else {
-                  toast.error('Only Host can skip the current set!', { style: { fontSize: '10px' } });
-                }
-              }}
-              className="w-7 h-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full border border-yellow-500/20 shadow-md active:scale-95"
-              title="Skip Current Set"
-            >
-              <span className="material-symbols-outlined text-yellow-300 text-[14px]">fast_forward</span>
-            </button>
           </div>
         </div>
 
