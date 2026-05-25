@@ -124,3 +124,9 @@ export interface PlayerAdvancingPayload {
 export interface BidRejectedPayload {
   reason: string;
 }
+
+export interface RoomUnavailablePayload {
+  roomCode: string;
+  source: string;
+  message: string;
+}

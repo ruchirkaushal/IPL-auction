@@ -11,7 +11,8 @@ import type {
   PlayerSoldPayload,
   PlayerUnsoldPayload,
   TimerUpdatePayload,
-  PlayerAdvancingPayload
+  PlayerAdvancingPayload,
+  RoomUnavailablePayload,
 } from '../types';
 
 const VITE_SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3005' : window.location.origin);
@@ -35,6 +36,12 @@ export const useSocket = () => {
   const pendingTimerTicksRef = useRef<number | null>(null);
   const timerListenersRef = useRef(new Set<TimerTickListener>());
   const lastLoggedSecondRef = useRef<number | null>(null);
+  const roomStateRef = useRef<RoomState | null>(null);
+  const lastServerActivityAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    roomStateRef.current = roomState;
+  }, [roomState]);
 
   const subscribeTimerTicks = useCallback((listener: TimerTickListener) => {
     timerListenersRef.current.add(listener);
@@ -58,16 +65,28 @@ export const useSocket = () => {
   }, [videoManager.graphicsReady, videoManager]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV && !import.meta.env.VITE_SERVER_URL) {
+      console.warn('[Socket] VITE_SERVER_URL not set in production. Falling back to current origin.');
+    }
+
     fetch(`${VITE_SERVER_URL}/api/players`)
       .then(res => res.json())
       .then(data => setAllPlayers(data))
       .catch(err => console.error('Failed to fetch players:', err));
 
-    const newSocket = io(VITE_SERVER_URL);
+    const newSocket = io(VITE_SERVER_URL, {
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      transports: ['websocket', 'polling'],
+    });
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
       console.log(`[Socket] connected ${newSocket.id}`);
+      lastServerActivityAtRef.current = Date.now();
       setIsConnected(true);
       setSocketError(null);
       const match = window.location.pathname.match(/\/(lobby|auction|summary)\/([^/]+)/);
@@ -88,8 +107,13 @@ export const useSocket = () => {
         }
       }
     });
-    newSocket.on('disconnect', (reason) => {
-      console.log(`[Socket] disconnected: ${reason}`);
+    newSocket.on('disconnect', (reason, details) => {
+      const disconnectDetails = details as { message?: string; description?: string } | undefined;
+      console.warn('[Socket] disconnected', {
+        reason,
+        message: disconnectDetails?.message,
+        description: disconnectDetails?.description,
+      });
       setIsConnected(false);
     });
     newSocket.on('connect_error', (error: Error) => {
@@ -104,9 +128,17 @@ export const useSocket = () => {
       setSocketError('Socket reconnect failed.');
       console.error('Socket reconnect failed');
     });
+    newSocket.io.on('reconnect_attempt', (attempt) => {
+      console.log(`[Socket] reconnect attempt ${attempt}`);
+    });
+    newSocket.io.on('reconnect', (attempt) => {
+      console.log(`[Socket] reconnected after ${attempt} attempts`);
+    });
 
     newSocket.on('room_state_update', (state: RoomState) => {
+      lastServerActivityAtRef.current = Date.now();
       setSocketError(null);
+      roomStateRef.current = state;
       setRoomState(state);
       const currentPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex] ?? null;
       console.log(
@@ -133,6 +165,7 @@ export const useSocket = () => {
     });
 
     newSocket.on('timer_update', (payload: TimerUpdatePayload) => {
+      lastServerActivityAtRef.current = Date.now();
       videoManagerRef.current.updateTimerTicks(payload.ticks);
       timerListenersRef.current.forEach((listener) => {
         try {
@@ -157,6 +190,7 @@ export const useSocket = () => {
     });
 
     newSocket.on('bid_placed', (payload: BidPlacedPayload) => {
+      lastServerActivityAtRef.current = Date.now();
       setLastBid(payload);
       const phase = videoManagerRef.current.getVideoPhase();
       if (
@@ -179,16 +213,19 @@ export const useSocket = () => {
     //   - start.mp4 ending with no bids → loadEndVideoStatic() internally
     // ─────────────────────────────────────────────────────────────────────
     newSocket.on('player_sold', (payload: PlayerSoldPayload) => {
+      lastServerActivityAtRef.current = Date.now();
       setLastSold(payload);
       // DO NOT call enterWaitingEnd() here
     });
 
     newSocket.on('player_unsold', (payload: PlayerUnsoldPayload) => {
+      lastServerActivityAtRef.current = Date.now();
       setLastUnsold(payload);
       // DO NOT call enterWaitingEnd() here
     });
 
     newSocket.on('player_advancing', (payload: PlayerAdvancingPayload) => {
+      lastServerActivityAtRef.current = Date.now();
       setLastAdvancing(payload);
     });
 
@@ -197,7 +234,18 @@ export const useSocket = () => {
     });
 
     newSocket.on('auction_complete', (state: RoomState) => {
+      lastServerActivityAtRef.current = Date.now();
+      roomStateRef.current = state;
       setRoomState(state);
+    });
+
+    newSocket.on('room_unavailable', (payload: RoomUnavailablePayload) => {
+      console.error('[Socket] room_unavailable', payload);
+      setRoomState(null);
+      roomStateRef.current = null;
+      setSocketError(
+        payload.message || 'Auction room is unavailable on server. Please rejoin from lobby.'
+      );
     });
 
     newSocket.on('kicked', () => {
@@ -226,7 +274,47 @@ export const useSocket = () => {
       console.error('Socket error:', payload.message);
     });
 
+    const staleStreamInterval = window.setInterval(() => {
+      const state = roomStateRef.current;
+      if (!state || !newSocket.connected) return;
+      if (document.visibilityState !== 'visible') return;
+      if (!state.auction.isStarted || state.auction.isPaused) return;
+      if (state.auction.phase !== 'bidding') return;
+
+      const staleForMs = Date.now() - lastServerActivityAtRef.current;
+      if (staleForMs > 15000) {
+        console.warn(`[Socket] stale stream for ${staleForMs}ms, forcing reconnect`);
+        newSocket.disconnect();
+        newSocket.connect();
+        return;
+      }
+      if (staleForMs > 7000) {
+        console.warn(`[Socket] stale stream for ${staleForMs}ms, requesting room state`);
+        newSocket.emit('request_room_state', { roomCode: state.roomCode });
+      }
+    }, 2000);
+
+    const tryReconnectOnVisibility = () => {
+      if (document.visibilityState === 'visible' && !newSocket.connected) {
+        console.log('[Socket] tab visible; forcing reconnect');
+        newSocket.connect();
+      }
+    };
+
+    const tryReconnectOnOnline = () => {
+      if (!newSocket.connected) {
+        console.log('[Socket] browser online; forcing reconnect');
+        newSocket.connect();
+      }
+    };
+
+    document.addEventListener('visibilitychange', tryReconnectOnVisibility);
+    window.addEventListener('online', tryReconnectOnOnline);
+
     return () => {
+      document.removeEventListener('visibilitychange', tryReconnectOnVisibility);
+      window.removeEventListener('online', tryReconnectOnOnline);
+      window.clearInterval(staleStreamInterval);
       timerListenersRef.current.clear();
       newSocket.disconnect();
     };

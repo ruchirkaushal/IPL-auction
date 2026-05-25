@@ -57,6 +57,9 @@ const AUCTION_TIMER_TICK_MS = Number(process.env.AUCTION_TIMER_TICK_MS ?? 100);
 const AUCTION_DELAY_RESOLVE_TO_NEXT_MS = Number(process.env.AUCTION_DELAY_RESOLVE_TO_NEXT_MS ?? 4000);
 const AUCTION_DELAY_ADVANCE_TO_BIDDING_MS = Number(process.env.AUCTION_DELAY_ADVANCE_TO_BIDDING_MS ?? 1000);
 const AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS = Number(process.env.AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS ?? 200);
+const SOCKET_PING_INTERVAL_MS = Number(process.env.SOCKET_PING_INTERVAL_MS ?? 25000);
+const SOCKET_PING_TIMEOUT_MS = Number(process.env.SOCKET_PING_TIMEOUT_MS ?? 120000);
+const SOCKET_RECOVERY_WINDOW_MS = Number(process.env.SOCKET_RECOVERY_WINDOW_MS ?? 120000);
 
 const getPlayerById = (id: string) => PLAYERS.find(p => p.id === id);
 // Helper to shuffle an array
@@ -110,7 +113,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: '*' } });
+const io = new Server(httpServer, {
+  cors: { origin: '*' },
+  pingInterval: SOCKET_PING_INTERVAL_MS,
+  pingTimeout: SOCKET_PING_TIMEOUT_MS,
+  connectionStateRecovery: {
+    maxDisconnectionDuration: SOCKET_RECOVERY_WINDOW_MS,
+    skipMiddlewares: true,
+  },
+});
+
+io.engine.on('connection_error', (err) => {
+  console.error('[Socket.IO connection_error]', {
+    code: err.code,
+    message: err.message,
+    context: err.context,
+  });
+});
 
 // REST API endpoint to get all players
 app.get('/api/players', (_req, res) => {
@@ -120,6 +139,9 @@ app.get('/api/players', (_req, res) => {
 console.log(`Loaded ${PLAYERS.length} players from the IPL database`);
 console.log(
   `Auction timing config: startTicks=${AUCTION_START_TICKS}, tickMs=${AUCTION_TIMER_TICK_MS}, resolveToNextMs=${AUCTION_DELAY_RESOLVE_TO_NEXT_MS}, advanceToBiddingMs=${AUCTION_DELAY_ADVANCE_TO_BIDDING_MS}, missingRecoveryMs=${AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS}`
+);
+console.log(
+  `Socket config: pingIntervalMs=${SOCKET_PING_INTERVAL_MS}, pingTimeoutMs=${SOCKET_PING_TIMEOUT_MS}, recoveryWindowMs=${SOCKET_RECOVERY_WINDOW_MS}`
 );
 
 const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -153,6 +175,24 @@ const emitRoomState = (roomCode: string) => {
     syncAuctionDerivedState(room.state);
     io.to(roomCode).emit('room_state_update', room.state);
   }
+};
+
+const emitRoomUnavailable = (socket: Socket, roomCode: string, source: string) => {
+  console.warn(`[Room Missing] source=${source} room=${roomCode} socket=${socket.id}`);
+  socket.emit('room_unavailable', {
+    roomCode,
+    source,
+    message: 'Room not found on server. It may have restarted or expired.',
+  });
+};
+
+const getRoomOrNotify = (socket: Socket, roomCode: string, source: string): Room | null => {
+  const room = rooms.get(roomCode);
+  if (!room) {
+    emitRoomUnavailable(socket, roomCode, source);
+    return null;
+  }
+  return room;
 };
 
 const clearAllTimers = (room: Room) => {
@@ -517,7 +557,11 @@ io.on('connection', (socket: Socket) => {
 
   socket.on('join_room', ({ roomCode, playerName, userId }: { roomCode: string, playerName: string, userId: string }) => {
     const room = rooms.get(roomCode);
-    if (!room) { socket.emit('error', { message: 'Room not found' }); return; }
+    if (!room) {
+      emitRoomUnavailable(socket, roomCode, 'join_room');
+      socket.emit('error', { message: 'Room not found' });
+      return;
+    }
 
     if (room.deletionTimeout) {
       clearTimeout(room.deletionTimeout);
@@ -565,7 +609,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('select_team', ({ roomCode, teamId }: { roomCode: string, teamId: TeamId }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'select_team');
     if (!room) return;
     
     const player = room.state.players.find(p => p.socketId === socket.id);
@@ -591,7 +635,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('start_auction', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'start_auction');
     if (!room || room.state.hostId !== socket.id) return;
     
     // Check that every player both selected a team and is ready.
@@ -634,7 +678,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('place_bid', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'place_bid');
     if (!room) return;
     const player = room.state.players.find(p => p.socketId === socket.id);
     if (!player || !player.teamId) return;
@@ -651,7 +695,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('pass_bid', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'pass_bid');
     if (!room || room.state.auction.phase !== 'bidding') return;
     
     const player = room.state.players.find(p => p.socketId === socket.id);
@@ -665,7 +709,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('reset_room', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'reset_room');
     if (!room || room.state.hostId !== socket.id) return;
     
     clearAllTimers(room);
@@ -712,7 +756,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('send_chat', ({ roomCode, text }: { roomCode: string, text: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'send_chat');
     if (!room) return;
     const player = room.state.players.find(p => p.socketId === socket.id);
     if (!player) return;
@@ -728,7 +772,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('toggle_pause', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'toggle_pause');
     if (!room || room.state.hostId !== socket.id) return;
 
     const currentPaused = room.state.auction.isPaused;
@@ -756,7 +800,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('end_auction', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'end_auction');
     if (!room || room.state.hostId !== socket.id) return;
 
     clearAllTimers(room);
@@ -905,7 +949,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('kick_player', ({ roomCode, targetSocketId }: { roomCode: string, targetSocketId: string }) => {
-    const room = rooms.get(roomCode);
+    const room = getRoomOrNotify(socket, roomCode, 'kick_player');
     if (!room || room.state.hostId !== socket.id) return;
     
     // Find player and remove them
@@ -932,6 +976,13 @@ io.on('connection', (socket: Socket) => {
 
   socket.on('disconnect', () => {
     handleLeaveRoom(socket.id, true);
+  });
+
+  socket.on('request_room_state', ({ roomCode }: { roomCode: string }) => {
+    const room = getRoomOrNotify(socket, roomCode, 'request_room_state');
+    if (!room) return;
+    socket.join(roomCode);
+    emitRoomState(roomCode);
   });
 });
 
