@@ -115,12 +115,9 @@ export default function Auction() {
         navigate(`/?roomCode=${roomCode}`);
         return;
       }
-      const timer = setTimeout(() => {
-        if (!roomState) {
-          navigate(`/?roomCode=${roomCode}`);
-        }
-      }, 8000);
-      return () => clearTimeout(timer);
+      // Removed the aggressive 8-second timeout that forcefully navigates users 
+      // to the landing page. We want to show "Loading Auction..." indefinitely 
+      // while socket reconnects and recovers state from the backend.
     }
   }, [socket, roomState, roomCode, navigate]);
 

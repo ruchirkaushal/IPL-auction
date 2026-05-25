@@ -231,84 +231,100 @@ const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boolean =>
 };
 
 const resolveCurrentPlayer = (room: Room) => {
-  const state = room.state;
-  const player = getPlayerById(state.auction.auctionQueue[state.auction.currentPlayerIndex]);
-  if (!player) return;
+  try {
+    const state = room.state;
+    const player = getPlayerById(state.auction.auctionQueue[state.auction.currentPlayerIndex]);
+    if (!player) return;
 
-  if (state.auction.highestBidderId) {
-    state.auction.phase = 'sold';
-    const team = state.teams[state.auction.highestBidderId];
-    const amountPaid = toSafeLakhs(state.auction.currentBid);
-    team.purseRemaining = toSafeLakhs(team.purseRemaining - amountPaid);
-    team.squad.push({ id: player.id, price: amountPaid });
-    if (player.isOverseas) team.overseasCount += 1;
-    
-    io.to(state.roomCode).emit('player_sold', {
-      teamId: team.teamId,
-      teamName: team.teamId,
-      amount: amountPaid,
-      playerName: player.name,
-      playerId: player.id
-    });
+    if (state.auction.highestBidderId) {
+      state.auction.phase = 'sold';
+      const team = state.teams[state.auction.highestBidderId];
+      if (!team) {
+        console.error(`[Error] resolveCurrentPlayer: Team ${state.auction.highestBidderId} not found`);
+        return;
+      }
+      const amountPaid = toSafeLakhs(state.auction.currentBid);
+      team.purseRemaining = toSafeLakhs(team.purseRemaining - amountPaid);
+      team.squad.push({ id: player.id, price: amountPaid });
+      if (player.isOverseas) team.overseasCount += 1;
+      
+      io.to(state.roomCode).emit('player_sold', {
+        teamId: team.teamId,
+        teamName: team.teamId,
+        amount: amountPaid,
+        playerName: player.name,
+        playerId: player.id
+      });
 
-    addChatMessage(room, {
-      type: 'system_sold',
-      teamId: team.teamId,
-      playerName: player.name,
-      amount: amountPaid
-    });
-  } else {
-    state.auction.phase = 'unsold';
-    io.to(state.roomCode).emit('player_unsold', {
-      playerName: player.name,
-      playerId: player.id
-    });
+      addChatMessage(room, {
+        type: 'system_sold',
+        teamId: team.teamId,
+        playerName: player.name,
+        amount: amountPaid
+      });
+    } else {
+      state.auction.phase = 'unsold';
+      io.to(state.roomCode).emit('player_unsold', {
+        playerName: player.name,
+        playerId: player.id
+      });
 
-    addChatMessage(room, {
-      type: 'system_unsold',
-      playerName: player.name
-    });
+      addChatMessage(room, {
+        type: 'system_unsold',
+        playerName: player.name
+      });
+    }
+
+    ALL_TEAM_IDS.forEach(id => { state.teams[id].status = 'idle'; });
+    emitRoomState(state.roomCode);
+
+    room.autoAdvanceTimeout = setTimeout(() => {
+      advanceToNextPlayer(room);
+    }, 4000);
+  } catch (error) {
+    console.error(`[CRITICAL] Error in resolveCurrentPlayer for room ${room.state.roomCode}:`, error);
   }
-
-  ALL_TEAM_IDS.forEach(id => { state.teams[id].status = 'idle'; });
-  emitRoomState(state.roomCode);
-
-  room.autoAdvanceTimeout = setTimeout(() => {
-    advanceToNextPlayer(room);
-  }, 4000);
 };
 
 const advanceToNextPlayer = (room: Room) => {
-  const state = room.state;
-  state.auction.phase = 'advancing';
-  state.auction.currentPlayerIndex += 1;
-  state.auction.currentBid = 0;
-  state.auction.nextBidAmount = null;
-  state.auction.highestBidderId = null;
-  state.auction.passedTeams = [];
-  state.auction.isAdvancing = false;
+  try {
+    const state = room.state;
+    state.auction.phase = 'advancing';
+    state.auction.currentPlayerIndex += 1;
+    state.auction.currentBid = 0;
+    state.auction.nextBidAmount = null;
+    state.auction.highestBidderId = null;
+    state.auction.passedTeams = [];
+    state.auction.isAdvancing = false;
 
-  if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
-    io.to(state.roomCode).emit('auction_complete', state);
-    return;
-  }
-
-  const nextPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
-  io.to(state.roomCode).emit('player_advancing', { nextPlayerId, nextPlayerIndex: state.auction.currentPlayerIndex });
-  
-  emitRoomState(state.roomCode);
-
-  setTimeout(() => {
-    const nextPlayer = getPlayerById(nextPlayerId);
-    if (nextPlayer) {
-      state.auction.currentBid = normalizeBasePrice(nextPlayer.basePrice);
+    if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
+      io.to(state.roomCode).emit('auction_complete', state);
+      return;
     }
-    state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
-    state.auction.phase = 'bidding';
+
+    const nextPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
+    io.to(state.roomCode).emit('player_advancing', { nextPlayerId, nextPlayerIndex: state.auction.currentPlayerIndex });
+    
     emitRoomState(state.roomCode);
-    startTimer(room);
-    scheduleAiBids(room);
-  }, 1000);
+
+    setTimeout(() => {
+      try {
+        const nextPlayer = getPlayerById(nextPlayerId);
+        if (nextPlayer) {
+          state.auction.currentBid = normalizeBasePrice(nextPlayer.basePrice);
+        }
+        state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
+        state.auction.phase = 'bidding';
+        emitRoomState(state.roomCode);
+        startTimer(room);
+        scheduleAiBids(room);
+      } catch (innerError) {
+        console.error(`[CRITICAL] Error in advanceToNextPlayer delayed start:`, innerError);
+      }
+    }, 1000);
+  } catch (error) {
+    console.error(`[CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
+  }
 };
 
 const startTimer = (room: Room) => {
@@ -668,8 +684,9 @@ io.on('connection', (socket: Socket) => {
             // They did not reconnect in time. Handle actual leave!
             const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
 
-            // Handle Host Transfer if they were the host
-            if (currentPlayer.isHost) {
+            // Handle Host Transfer if they were the host AND room is NOT locked
+            // If room is locked, we want to preserve host privileges even if they are offline.
+            if (currentPlayer.isHost && !currentRoom.state.isLocked) {
               currentPlayer.isHost = false;
               if (activePlayers.length > 0) {
                 const nextHost = activePlayers[0];
@@ -691,17 +708,19 @@ io.on('connection', (socket: Socket) => {
             const remainingActive = currentRoom.state.players.filter(p => p.socketId !== '');
             if (remainingActive.length === 0) {
               if (currentRoom.deletionTimeout) clearTimeout(currentRoom.deletionTimeout);
+              // Wait 60 minutes instead of 60 seconds before destroying room
               currentRoom.deletionTimeout = setTimeout(() => {
                 const checkRoom = rooms.get(roomCode);
                 if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
                   clearAllTimers(checkRoom);
                   rooms.delete(roomCode);
+                  console.log(`[Room Lifecycle] Room ${roomCode} deleted due to inactivity.`);
                 }
-              }, 60000);
+              }, 3600000);
             }
 
             emitRoomState(roomCode);
-          }, 10000);
+          }, 120000); // 120 seconds grace period
 
           reconnectTimeouts.set(key, timeout);
           return;
