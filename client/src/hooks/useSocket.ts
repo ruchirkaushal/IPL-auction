@@ -70,12 +70,28 @@ export const useSocket = () => {
           userId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
           localStorage.setItem('ipl_auction_user_id', userId);
         }
+        if (roomCode && (!playerName || !userId)) {
+          setSocketError('Session expired or missing player data. Returning to home.');
+          return;
+        }
         if (roomCode && playerName && userId) {
           newSocket.emit('join_room', { roomCode, playerName, userId });
         }
       }
     });
     newSocket.on('disconnect', () => setIsConnected(false));
+    newSocket.on('connect_error', (error: Error) => {
+      setSocketError(error.message || 'Socket connection failed.');
+      console.error('Socket connect error:', error);
+    });
+    newSocket.on('connect_timeout', () => {
+      setSocketError('Socket connection timed out.');
+      console.error('Socket connection timed out');
+    });
+    newSocket.on('reconnect_failed', () => {
+      setSocketError('Socket reconnect failed.');
+      console.error('Socket reconnect failed');
+    });
 
     newSocket.on('room_state_update', (state: RoomState) => {
       setSocketError(null);
