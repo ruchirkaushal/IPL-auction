@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSocketContext } from '../SocketContext';
 import { useAuctionState } from '../hooks/useAuctionState';
 import useDeviceDetect from '../hooks/useDeviceDetect';
+import toast from 'react-hot-toast';
 
 import DesktopAuctionLayout from '../components/DesktopAuctionLayout';
 import MobileLandscapeAuction from '../components/MobileLandscapeAuction';
@@ -21,7 +22,8 @@ export default function Auction() {
     endAuction,
     resetRoom,
     leaveRoom,
-    socket
+    socket,
+    socketError
   } = useSocketContext();
   const { canBid } = useAuctionState(roomState, myTeamId, allPlayers);
   const { isPhone, isPortrait } = useDeviceDetect();
@@ -122,17 +124,15 @@ export default function Auction() {
   }, [socket, navigate, roomCode]);
 
   useEffect(() => {
-    if (socket && !roomState) {
-      const playerName = localStorage.getItem('playerName');
-      if (!playerName) {
+    if (!socketError || roomState) return;
+    toast.error(socketError, { duration: 5000 });
+    const timer = setTimeout(() => {
+      if (!roomState) {
         navigate(`/?roomCode=${roomCode}`);
-        return;
       }
-      // Removed the aggressive 8-second timeout that forcefully navigates users 
-      // to the landing page. We want to show "Loading Auction..." indefinitely 
-      // while socket reconnects and recovers state from the backend.
-    }
-  }, [socket, roomState, roomCode, navigate]);
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [socketError, roomState, roomCode, navigate]);
 
   if (!roomState) return (
     <div className="p-8 text-white flex justify-center items-center h-screen bg-gray-950">

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 export default function Lobby() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
-  const { roomState, myTeamId, selectTeam, startAuction, kickPlayer, socket } = useSocketContext();
+  const { roomState, myTeamId, selectTeam, startAuction, kickPlayer, socket, socketError } = useSocketContext();
 
   useEffect(() => {
     if (roomState?.auction.isStarted && roomCode) {
@@ -36,14 +36,18 @@ export default function Lobby() {
   }, [roomState?.players]);
 
   useEffect(() => {
-    if (!socket) return;
-    const handleError = ({ message }: { message: string }) => toast.error(message, { 
-      duration: 4000,
+    if (!socketError || roomState) return;
+    toast.error(socketError, {
+      duration: 5000,
       style: { borderRadius: '12px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b' }
     });
-    socket.on('error', handleError);
-    return () => { socket.off('error', handleError); };
-  }, [socket]);
+    const timer = setTimeout(() => {
+      if (!roomState) {
+        navigate(`/?roomCode=${roomCode}`);
+      }
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [socketError, roomState, roomCode, navigate]);
 
   if (!roomState) return <div className="h-screen bg-gray-950 flex items-center justify-center">
      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>

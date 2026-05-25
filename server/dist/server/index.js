@@ -34,6 +34,9 @@ const getSetNameForPlayer = (playerId) => {
 };
 const rooms = new Map();
 const reconnectTimeouts = new Map();
+const getReconnectKey = (roomCode, player) => {
+    return `${roomCode}_${player.userId ?? player.name}`;
+};
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -162,76 +165,95 @@ const placeBid = (room, teamId, isAI = false) => {
     return true;
 };
 const resolveCurrentPlayer = (room) => {
-    const state = room.state;
-    const player = getPlayerById(state.auction.auctionQueue[state.auction.currentPlayerIndex]);
-    if (!player)
-        return;
-    if (state.auction.highestBidderId) {
-        state.auction.phase = 'sold';
-        const team = state.teams[state.auction.highestBidderId];
-        const amountPaid = (0, auctionPricing_1.toSafeLakhs)(state.auction.currentBid);
-        team.purseRemaining = (0, auctionPricing_1.toSafeLakhs)(team.purseRemaining - amountPaid);
-        team.squad.push({ id: player.id, price: amountPaid });
-        if (player.isOverseas)
-            team.overseasCount += 1;
-        io.to(state.roomCode).emit('player_sold', {
-            teamId: team.teamId,
-            teamName: team.teamId,
-            amount: amountPaid,
-            playerName: player.name,
-            playerId: player.id
-        });
-        addChatMessage(room, {
-            type: 'system_sold',
-            teamId: team.teamId,
-            playerName: player.name,
-            amount: amountPaid
-        });
+    try {
+        const state = room.state;
+        const player = getPlayerById(state.auction.auctionQueue[state.auction.currentPlayerIndex]);
+        if (!player)
+            return;
+        if (state.auction.highestBidderId) {
+            state.auction.phase = 'sold';
+            const team = state.teams[state.auction.highestBidderId];
+            if (!team) {
+                console.error(`[Error] resolveCurrentPlayer: Team ${state.auction.highestBidderId} not found`);
+                return;
+            }
+            const amountPaid = (0, auctionPricing_1.toSafeLakhs)(state.auction.currentBid);
+            team.purseRemaining = (0, auctionPricing_1.toSafeLakhs)(team.purseRemaining - amountPaid);
+            team.squad.push({ id: player.id, price: amountPaid });
+            if (player.isOverseas)
+                team.overseasCount += 1;
+            io.to(state.roomCode).emit('player_sold', {
+                teamId: team.teamId,
+                teamName: team.teamId,
+                amount: amountPaid,
+                playerName: player.name,
+                playerId: player.id
+            });
+            addChatMessage(room, {
+                type: 'system_sold',
+                teamId: team.teamId,
+                playerName: player.name,
+                amount: amountPaid
+            });
+        }
+        else {
+            state.auction.phase = 'unsold';
+            io.to(state.roomCode).emit('player_unsold', {
+                playerName: player.name,
+                playerId: player.id
+            });
+            addChatMessage(room, {
+                type: 'system_unsold',
+                playerName: player.name
+            });
+        }
+        ALL_TEAM_IDS.forEach(id => { state.teams[id].status = 'idle'; });
+        emitRoomState(state.roomCode);
+        room.autoAdvanceTimeout = setTimeout(() => {
+            advanceToNextPlayer(room);
+        }, 4000);
     }
-    else {
-        state.auction.phase = 'unsold';
-        io.to(state.roomCode).emit('player_unsold', {
-            playerName: player.name,
-            playerId: player.id
-        });
-        addChatMessage(room, {
-            type: 'system_unsold',
-            playerName: player.name
-        });
+    catch (error) {
+        console.error(`[CRITICAL] Error in resolveCurrentPlayer for room ${room.state.roomCode}:`, error);
     }
-    ALL_TEAM_IDS.forEach(id => { state.teams[id].status = 'idle'; });
-    emitRoomState(state.roomCode);
-    room.autoAdvanceTimeout = setTimeout(() => {
-        advanceToNextPlayer(room);
-    }, 4000);
 };
 const advanceToNextPlayer = (room) => {
-    const state = room.state;
-    state.auction.phase = 'advancing';
-    state.auction.currentPlayerIndex += 1;
-    state.auction.currentBid = 0;
-    state.auction.nextBidAmount = null;
-    state.auction.highestBidderId = null;
-    state.auction.passedTeams = [];
-    state.auction.isAdvancing = false;
-    if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
-        io.to(state.roomCode).emit('auction_complete', state);
-        return;
-    }
-    const nextPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
-    io.to(state.roomCode).emit('player_advancing', { nextPlayerId, nextPlayerIndex: state.auction.currentPlayerIndex });
-    emitRoomState(state.roomCode);
-    setTimeout(() => {
-        const nextPlayer = getPlayerById(nextPlayerId);
-        if (nextPlayer) {
-            state.auction.currentBid = (0, auctionPricing_1.normalizeBasePrice)(nextPlayer.basePrice);
+    try {
+        const state = room.state;
+        state.auction.phase = 'advancing';
+        state.auction.currentPlayerIndex += 1;
+        state.auction.currentBid = 0;
+        state.auction.nextBidAmount = null;
+        state.auction.highestBidderId = null;
+        state.auction.passedTeams = [];
+        state.auction.isAdvancing = false;
+        if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
+            io.to(state.roomCode).emit('auction_complete', state);
+            return;
         }
-        state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
-        state.auction.phase = 'bidding';
+        const nextPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
+        io.to(state.roomCode).emit('player_advancing', { nextPlayerId, nextPlayerIndex: state.auction.currentPlayerIndex });
         emitRoomState(state.roomCode);
-        startTimer(room);
-        scheduleAiBids(room);
-    }, 1000);
+        setTimeout(() => {
+            try {
+                const nextPlayer = getPlayerById(nextPlayerId);
+                if (nextPlayer) {
+                    state.auction.currentBid = (0, auctionPricing_1.normalizeBasePrice)(nextPlayer.basePrice);
+                }
+                state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
+                state.auction.phase = 'bidding';
+                emitRoomState(state.roomCode);
+                startTimer(room);
+                scheduleAiBids(room);
+            }
+            catch (innerError) {
+                console.error(`[CRITICAL] Error in advanceToNextPlayer delayed start:`, innerError);
+            }
+        }, 1000);
+    }
+    catch (error) {
+        console.error(`[CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
+    }
 };
 const startTimer = (room) => {
     if (room.state.auction.isPaused)
@@ -321,13 +343,16 @@ io.on('connection', (socket) => {
             clearTimeout(room.deletionTimeout);
             room.deletionTimeout = null;
         }
-        // Clear reconnect timeout if any
-        const key = `${roomCode}_${playerName}`;
-        const pendingTimeout = reconnectTimeouts.get(key);
-        if (pendingTimeout) {
-            clearTimeout(pendingTimeout);
-            reconnectTimeouts.delete(key);
-        }
+        // Clear reconnect timeout if any, using stable user IDs and legacy name fallback.
+        const reconnectKey = `${roomCode}_${userId}`;
+        const legacyKey = `${roomCode}_${playerName}`;
+        [reconnectKey, legacyKey].forEach((key) => {
+            const pendingTimeout = reconnectTimeouts.get(key);
+            if (pendingTimeout) {
+                clearTimeout(pendingTimeout);
+                reconnectTimeouts.delete(key);
+            }
+        });
         // Use userId for strong identity. Fallback to name for legacy clients if needed.
         const existingPlayerIndex = room.state.players.findIndex(p => p.userId === userId || (p.userId === undefined && p.name === playerName));
         const isRejoining = existingPlayerIndex !== -1;
@@ -386,9 +411,9 @@ io.on('connection', (socket) => {
         const room = rooms.get(roomCode);
         if (!room || room.state.hostId !== socket.id)
             return;
-        // Check if all players ready
-        if (!room.state.players.every(p => p.isReady)) {
-            socket.emit('error', { message: 'Not all players are ready' });
+        // Check that every player both selected a team and is ready.
+        if (!room.state.players.every(p => p.isReady && p.teamId !== null)) {
+            socket.emit('error', { message: 'All managers must select a team before starting the auction.' });
             return;
         }
         room.state.isLocked = true;
@@ -454,6 +479,7 @@ io.on('connection', (socket) => {
             currentSetName: '',
             isPaused: false
         };
+        room.state.isLocked = false;
         // Reset team states
         ALL_TEAM_IDS.forEach(teamId => {
             room.state.teams[teamId].ownerId = null;
@@ -537,13 +563,14 @@ io.on('connection', (socket) => {
                 if (isDisconnect) {
                     // 1. Mark socket as empty
                     player.socketId = '';
-                    if (player.teamId) {
+                    if (player.teamId && !room.state.isLocked) {
                         room.state.teams[player.teamId].ownerId = null;
+                        room.state.teams[player.teamId].ownerName = null;
                     }
                     // Emit immediately so other players see they went offline
                     emitRoomState(roomCode);
-                    // 2. Set up the reconnect grace period (10 seconds)
-                    const key = `${roomCode}_${player.name}`;
+                    // 2. Set up the reconnect grace period (120 seconds)
+                    const key = getReconnectKey(roomCode, player);
                     // Clear any existing timeout for this player
                     const oldTimeout = reconnectTimeouts.get(key);
                     if (oldTimeout)
@@ -554,7 +581,7 @@ io.on('connection', (socket) => {
                         const currentRoom = rooms.get(roomCode);
                         if (!currentRoom)
                             return;
-                        const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.name === player.name);
+                        const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.userId === player.userId || p.name === player.name);
                         if (currentPlayerIndex === -1)
                             return;
                         const currentPlayer = currentRoom.state.players[currentPlayerIndex];
@@ -564,8 +591,9 @@ io.on('connection', (socket) => {
                         }
                         // They did not reconnect in time. Handle actual leave!
                         const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
-                        // Handle Host Transfer if they were the host
-                        if (currentPlayer.isHost) {
+                        // Handle Host Transfer if they were the host AND room is NOT locked
+                        // If room is locked, we want to preserve host privileges even if they are offline.
+                        if (currentPlayer.isHost && !currentRoom.state.isLocked) {
                             currentPlayer.isHost = false;
                             if (activePlayers.length > 0) {
                                 const nextHost = activePlayers[0];
@@ -586,27 +614,41 @@ io.on('connection', (socket) => {
                         if (remainingActive.length === 0) {
                             if (currentRoom.deletionTimeout)
                                 clearTimeout(currentRoom.deletionTimeout);
+                            // Wait 60 minutes instead of 60 seconds before destroying room
                             currentRoom.deletionTimeout = setTimeout(() => {
                                 const checkRoom = rooms.get(roomCode);
                                 if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
                                     clearAllTimers(checkRoom);
                                     rooms.delete(roomCode);
+                                    console.log(`[Room Lifecycle] Room ${roomCode} deleted due to inactivity.`);
                                 }
-                            }, 60000);
+                            }, 3600000);
                         }
                         emitRoomState(roomCode);
-                    }, 10000);
+                    }, 120000); // 120 seconds grace period
                     reconnectTimeouts.set(key, timeout);
+                    return;
+                }
+                if (!isDisconnect && room.state.isLocked) {
+                    // Treat explicit room leave during a live auction as a temporary disconnect.
+                    const clientSocket = io.sockets.sockets.get(socketId);
+                    if (clientSocket) {
+                        clientSocket.leave(roomCode);
+                    }
+                    handleLeaveRoom(socketId, true);
                     return;
                 }
                 // --- Explicit Leave Room (socket.emit('leave_room')) ---
                 // Cancel any pending reconnect timeout
-                const key = `${roomCode}_${player.name}`;
-                const pending = reconnectTimeouts.get(key);
-                if (pending) {
-                    clearTimeout(pending);
-                    reconnectTimeouts.delete(key);
-                }
+                const explicitKey = getReconnectKey(roomCode, player);
+                const legacyExplicitKey = `${roomCode}_${player.name}`;
+                [explicitKey, legacyExplicitKey].forEach((key) => {
+                    const pending = reconnectTimeouts.get(key);
+                    if (pending) {
+                        clearTimeout(pending);
+                        reconnectTimeouts.delete(key);
+                    }
+                });
                 if (player.teamId) {
                     room.state.teams[player.teamId].ownerId = null;
                     room.state.teams[player.teamId].ownerName = null;

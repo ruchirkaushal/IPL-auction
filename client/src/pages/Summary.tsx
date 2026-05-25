@@ -10,7 +10,7 @@ import { TEAMS } from '../constants/teams';
 export default function Summary() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
-  const { roomState, resetRoom, socket, allPlayers } = useSocketContext();
+  const { roomState, resetRoom, socket, allPlayers, socketError } = useSocketContext();
   const [copiedTeam, setCopiedTeam] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,15 +25,15 @@ export default function Summary() {
   }, [socket, navigate, roomCode]);
 
   useEffect(() => {
-    if (socket && !roomState) {
-      const playerName = localStorage.getItem('playerName');
-      if (!playerName) {
+    if (!socketError || roomState) return;
+    toast.error(socketError, { duration: 5000 });
+    const timer = setTimeout(() => {
+      if (!roomState) {
         navigate(`/?roomCode=${roomCode}`);
-        return;
       }
-      // Keep users on the summary screen while reconnecting or waiting for final room state.
-    }
-  }, [socket, roomState, roomCode, navigate]);
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [socketError, roomState, roomCode, navigate]);
 
   const { teamData, mostExpensivePlayer } = useMemo(() => {
     if (!roomState || allPlayers.length === 0) return { teamData: [], mostExpensivePlayer: null as { player: Player, teamId: TeamId, price: number } | null };

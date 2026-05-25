@@ -28,6 +28,7 @@ export const useSocket = () => {
   const [lastUnsold, setLastUnsold] = useState<PlayerUnsoldPayload | null>(null);
   const [lastAdvancing, setLastAdvancing] = useState<PlayerAdvancingPayload | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [socketError, setSocketError] = useState<string | null>(null);
 
   const videoManager = useVideoManager();
   const videoManagerRef = useRef(videoManager);
@@ -59,6 +60,7 @@ export const useSocket = () => {
 
     newSocket.on('connect', () => {
       setIsConnected(true);
+      setSocketError(null);
       const match = window.location.pathname.match(/\/(lobby|auction|summary)\/([^/]+)/);
       if (match) {
         const roomCode = match[2];
@@ -76,6 +78,7 @@ export const useSocket = () => {
     newSocket.on('disconnect', () => setIsConnected(false));
 
     newSocket.on('room_state_update', (state: RoomState) => {
+      setSocketError(null);
       setRoomState(state);
       const me = state.players.find(p => p.socketId === newSocket.id);
       if (me) {
@@ -176,6 +179,7 @@ export const useSocket = () => {
     });
 
     newSocket.on('error', (payload: { message: string }) => {
+      setSocketError(payload.message);
       console.error('Socket error:', payload.message);
     });
 
@@ -260,6 +264,7 @@ export const useSocket = () => {
     lastUnsold,
     lastAdvancing,
     isConnected,
+    socketError,
     createRoom,
     joinRoom,
     selectTeam,
