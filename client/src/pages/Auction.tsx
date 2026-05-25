@@ -134,6 +134,19 @@ export default function Auction() {
     return () => clearTimeout(timer);
   }, [socketError, roomState, roomCode, navigate]);
 
+  useEffect(() => {
+    if (!roomState) return;
+    const currentPlayerId = roomState.auction.auctionQueue[roomState.auction.currentPlayerIndex] ?? null;
+    console.log(
+      `[AuctionPage] phase=${roomState.auction.phase} idx=${roomState.auction.currentPlayerIndex}/${roomState.auction.auctionQueue.length} paused=${roomState.auction.isPaused} current=${currentPlayerId ?? 'none'}`
+    );
+  }, [
+    roomState?.auction.phase,
+    roomState?.auction.currentPlayerIndex,
+    roomState?.auction.auctionQueue.length,
+    roomState?.auction.isPaused,
+  ]);
+
   if (!roomState) return (
     <div className="p-8 text-white flex justify-center items-center h-screen bg-gray-950">
       <div className="animate-pulse flex flex-col items-center">
@@ -190,4 +203,3 @@ export default function Auction() {
 
   return <DesktopAuctionLayout {...layoutProps} />;
 }
-

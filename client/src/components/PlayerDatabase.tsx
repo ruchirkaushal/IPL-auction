@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   buildAuctionSets,
   getCurrentSetForIndex,
@@ -351,6 +351,13 @@ export default function PlayerDatabase({
 
     return list;
   }, [selectedSet, playerMap, filterRole, search, currentPlayerId, nextPlayerId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    console.log(
+      `[PlayerDatabase] open set=${effectiveCode ?? 'none'} current=${currentPlayerId ?? 'none'} next=${nextPlayerId ?? 'none'} visible=${displayPlayers.length} search="${search}" role=${filterRole}`
+    );
+  }, [isOpen, effectiveCode, currentPlayerId, nextPlayerId, displayPlayers.length, search, filterRole]);
 
   if (!isOpen) return null;
 

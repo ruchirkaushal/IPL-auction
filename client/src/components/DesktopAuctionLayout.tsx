@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { RoomState, Player, TeamId, VideoPhase } from '../types';
@@ -54,6 +54,13 @@ export default function DesktopAuctionLayout({
   actions
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
+
+  useEffect(() => {
+    const currentPlayerId = roomState.auction.auctionQueue[roomState.auction.currentPlayerIndex] ?? null;
+    console.log(
+      `[UI Desktop] player_database_${isDatabaseOpen ? 'opened' : 'closed'} phase=${roomState.auction.phase} idx=${roomState.auction.currentPlayerIndex}/${roomState.auction.auctionQueue.length} current=${currentPlayerId ?? 'none'}`
+    );
+  }, [isDatabaseOpen, roomState.auction.phase, roomState.auction.currentPlayerIndex, roomState.auction.auctionQueue]);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30">

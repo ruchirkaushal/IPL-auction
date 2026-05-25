@@ -15,13 +15,13 @@ import type {
 } from '../types';
 
 const VITE_SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3005' : window.location.origin);
+type TimerTickListener = (ticks: number) => void;
 
 export const useSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [myTeamId, setMyTeamId] = useState<TeamId | null>(null);
-  const [timerTicks, setTimerTicks] = useState<number>(100);
   const [lastBid, setLastBid] = useState<BidPlacedPayload | null>(null);
   const [lastBidRejected, setLastBidRejected] = useState<BidRejectedPayload | null>(null);
   const [lastSold, setLastSold] = useState<PlayerSoldPayload | null>(null);
@@ -33,6 +33,15 @@ export const useSocket = () => {
   const videoManager = useVideoManager();
   const videoManagerRef = useRef(videoManager);
   const pendingTimerTicksRef = useRef<number | null>(null);
+  const timerListenersRef = useRef(new Set<TimerTickListener>());
+  const lastLoggedSecondRef = useRef<number | null>(null);
+
+  const subscribeTimerTicks = useCallback((listener: TimerTickListener) => {
+    timerListenersRef.current.add(listener);
+    return () => {
+      timerListenersRef.current.delete(listener);
+    };
+  }, []);
 
   useEffect(() => {
     videoManagerRef.current = videoManager;
@@ -42,7 +51,6 @@ export const useSocket = () => {
     if (videoManager.graphicsReady && pendingTimerTicksRef.current !== null) {
       const pendingTicks = pendingTimerTicksRef.current;
       pendingTimerTicksRef.current = null;
-      setTimerTicks(pendingTicks);
       if (pendingTicks === 0) {
         videoManager.onTimerExpired();
       }
@@ -59,6 +67,7 @@ export const useSocket = () => {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
+      console.log(`[Socket] connected ${newSocket.id}`);
       setIsConnected(true);
       setSocketError(null);
       const match = window.location.pathname.match(/\/(lobby|auction|summary)\/([^/]+)/);
@@ -79,7 +88,10 @@ export const useSocket = () => {
         }
       }
     });
-    newSocket.on('disconnect', () => setIsConnected(false));
+    newSocket.on('disconnect', (reason) => {
+      console.log(`[Socket] disconnected: ${reason}`);
+      setIsConnected(false);
+    });
     newSocket.on('connect_error', (error: Error) => {
       setSocketError(error.message || 'Socket connection failed.');
       console.error('Socket connect error:', error);
@@ -96,6 +108,10 @@ export const useSocket = () => {
     newSocket.on('room_state_update', (state: RoomState) => {
       setSocketError(null);
       setRoomState(state);
+      const currentPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex] ?? null;
+      console.log(
+        `[RoomState ${state.roomCode}] phase=${state.auction.phase} idx=${state.auction.currentPlayerIndex}/${state.auction.auctionQueue.length} paused=${state.auction.isPaused} ticks=${state.auction.ticks} current=${currentPlayerId ?? 'none'}`
+      );
       const me = state.players.find(p => p.socketId === newSocket.id);
       if (me) {
         setMyTeamId(me.teamId);
@@ -118,9 +134,20 @@ export const useSocket = () => {
 
     newSocket.on('timer_update', (payload: TimerUpdatePayload) => {
       videoManagerRef.current.updateTimerTicks(payload.ticks);
+      timerListenersRef.current.forEach((listener) => {
+        try {
+          listener(payload.ticks);
+        } catch (listenerError) {
+          console.error('[Socket] timer listener failed:', listenerError);
+        }
+      });
+
+      if (payload.ticks > 0 && payload.ticks % 10 === 0 && lastLoggedSecondRef.current !== payload.ticks) {
+        lastLoggedSecondRef.current = payload.ticks;
+        console.log(`[Timer] ticks=${payload.ticks}`);
+      }
 
       if (videoManagerRef.current.getGraphicsReady()) {
-        setTimerTicks(payload.ticks);
         if (payload.ticks === 0) {
           videoManagerRef.current.onTimerExpired();
         }
@@ -200,6 +227,7 @@ export const useSocket = () => {
     });
 
     return () => {
+      timerListenersRef.current.clear();
       newSocket.disconnect();
     };
   }, []);
@@ -273,7 +301,6 @@ export const useSocket = () => {
     roomState,
     allPlayers,
     myTeamId,
-    timerTicks,
     lastBid,
     lastBidRejected,
     lastSold,
@@ -293,6 +320,7 @@ export const useSocket = () => {
     sendChat,
     leaveRoom,
     kickPlayer,
+    subscribeTimerTicks,
     videoManager,
   };
 };

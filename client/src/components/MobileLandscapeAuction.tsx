@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { RoomState, Player, VideoPhase } from '../types';
@@ -55,6 +55,13 @@ export default function MobileLandscapeAuction({
   actions
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
+
+  useEffect(() => {
+    const currentPlayerId = roomState.auction.auctionQueue[roomState.auction.currentPlayerIndex] ?? null;
+    console.log(
+      `[UI Mobile] player_database_${isDatabaseOpen ? 'opened' : 'closed'} phase=${roomState.auction.phase} idx=${roomState.auction.currentPlayerIndex}/${roomState.auction.auctionQueue.length} current=${currentPlayerId ?? 'none'}`
+    );
+  }, [isDatabaseOpen, roomState.auction.phase, roomState.auction.currentPlayerIndex, roomState.auction.auctionQueue]);
 
   return (
     <div className="mobile-landscape-mode flex flex-row w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30 text-xs">

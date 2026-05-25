@@ -51,8 +51,9 @@ const AnimatedBidValue = ({
 };
 
 export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraphicsReady }: VideoPlayerProps) {
-  const { roomState, allPlayers, myTeamId, timerTicks, lastSold, lastUnsold } = useSocketContext();
+  const { roomState, allPlayers, myTeamId, subscribeTimerTicks, lastSold, lastUnsold } = useSocketContext();
   const { currentPlayer } = useAuctionState(roomState, myTeamId, allPlayers);
+  const [timerTicks, setTimerTicks] = useState(100);
   const activeBidAmount = roomState?.auction.currentBid ?? 0;
 
   const isPaused = roomState?.auction.isPaused;
@@ -82,6 +83,12 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
 
   const timerPercentage = (timerTicks / 100) * 100;
   const timerColor = timerTicks > 50 ? '#00E676' : timerTicks > 20 ? '#F5A623' : '#FF1744';
+
+  useEffect(() => {
+    return subscribeTimerTicks((ticks) => {
+      setTimerTicks(ticks);
+    });
+  }, [subscribeTimerTicks]);
 
   useEffect(() => {
     if (!showPlayerInfo || !currentPlayer) {

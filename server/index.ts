@@ -52,6 +52,11 @@ export interface RoomState { roomCode: string; hostId: string; players: RoomPlay
 const ALL_TEAM_IDS: TeamId[] = ['MI', 'CSK', 'RCB', 'KKR', 'DC', 'RR', 'PBKS', 'SRH', 'GT', 'LSG'];
 // Full 232-player database from all 10 IPL teams
 const PLAYERS: Player[] = ALL_PLAYERS;
+const AUCTION_START_TICKS = Number(process.env.AUCTION_START_TICKS ?? 100);
+const AUCTION_TIMER_TICK_MS = Number(process.env.AUCTION_TIMER_TICK_MS ?? 100);
+const AUCTION_DELAY_RESOLVE_TO_NEXT_MS = Number(process.env.AUCTION_DELAY_RESOLVE_TO_NEXT_MS ?? 4000);
+const AUCTION_DELAY_ADVANCE_TO_BIDDING_MS = Number(process.env.AUCTION_DELAY_ADVANCE_TO_BIDDING_MS ?? 1000);
+const AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS = Number(process.env.AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS ?? 200);
 
 const getPlayerById = (id: string) => PLAYERS.find(p => p.id === id);
 // Helper to shuffle an array
@@ -77,6 +82,7 @@ interface Room {
   state: RoomState;
   timerInterval: NodeJS.Timeout | null;
   autoAdvanceTimeout: NodeJS.Timeout | null;
+  biddingStartTimeout: NodeJS.Timeout | null;
   aiTimeouts: NodeJS.Timeout[];
   deletionTimeout?: NodeJS.Timeout | null;
 }
@@ -86,6 +92,18 @@ const reconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
 const getReconnectKey = (roomCode: string, player: { userId?: string; name: string }) => {
   return `${roomCode}_${player.userId ?? player.name}`;
+};
+
+const getCurrentPlayerId = (state: RoomState): string | null => {
+  return state.auction.auctionQueue[state.auction.currentPlayerIndex] ?? null;
+};
+
+const logAuctionEvent = (room: Room, event: string, meta: Record<string, unknown> = {}) => {
+  const auction = room.state.auction;
+  const currentPlayerId = getCurrentPlayerId(room.state);
+  console.log(
+    `[Auction ${room.state.roomCode}] ${event} :: phase=${auction.phase} idx=${auction.currentPlayerIndex}/${auction.auctionQueue.length} ticks=${auction.ticks} paused=${auction.isPaused} advancing=${auction.isAdvancing} current=${currentPlayerId ?? 'none'} ${JSON.stringify(meta)}`
+  );
 };
 
 const app = express();
@@ -100,6 +118,9 @@ app.get('/api/players', (_req, res) => {
 });
 
 console.log(`Loaded ${PLAYERS.length} players from the IPL database`);
+console.log(
+  `Auction timing config: startTicks=${AUCTION_START_TICKS}, tickMs=${AUCTION_TIMER_TICK_MS}, resolveToNextMs=${AUCTION_DELAY_RESOLVE_TO_NEXT_MS}, advanceToBiddingMs=${AUCTION_DELAY_ADVANCE_TO_BIDDING_MS}, missingRecoveryMs=${AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS}`
+);
 
 const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -137,10 +158,23 @@ const emitRoomState = (roomCode: string) => {
 const clearAllTimers = (room: Room) => {
   if (room.timerInterval) clearInterval(room.timerInterval);
   if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
+  if (room.biddingStartTimeout) clearTimeout(room.biddingStartTimeout);
   room.aiTimeouts.forEach(clearTimeout);
   room.timerInterval = null;
   room.autoAdvanceTimeout = null;
+  room.biddingStartTimeout = null;
   room.aiTimeouts = [];
+};
+
+const scheduleAutoAdvance = (room: Room, delayMs: number, reason: string) => {
+  if (room.autoAdvanceTimeout) {
+    clearTimeout(room.autoAdvanceTimeout);
+  }
+  room.autoAdvanceTimeout = setTimeout(() => {
+    room.autoAdvanceTimeout = null;
+    advanceToNextPlayer(room, reason);
+  }, delayMs);
+  logAuctionEvent(room, 'auto_advance_scheduled', { delayMs, reason });
 };
 
 const AI_PREFS: Record<TeamId, { targetIds: string[], roles: PlayerRole[] }> = {
@@ -215,7 +249,7 @@ const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boolean =>
   });
   team.status = 'leading';
   
-  state.auction.ticks = 100;
+  state.auction.ticks = AUCTION_START_TICKS;
   syncAuctionDerivedState(state);
   
   io.to(state.roomCode).emit('bid_placed', { teamId, teamName: teamId, amount: normalizedAmount, isAI });
@@ -237,8 +271,21 @@ const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boolean =>
 const resolveCurrentPlayer = (room: Room) => {
   try {
     const state = room.state;
-    const player = getPlayerById(state.auction.auctionQueue[state.auction.currentPlayerIndex]);
-    if (!player) return;
+    const playerId = getCurrentPlayerId(state);
+    if (!playerId) {
+      logAuctionEvent(room, 'resolve_missing_player_id');
+      state.auction.isAdvancing = false;
+      scheduleAutoAdvance(room, AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS, 'missing_player_id');
+      return;
+    }
+
+    const player = getPlayerById(playerId);
+    if (!player) {
+      logAuctionEvent(room, 'resolve_missing_player_record', { playerId });
+      state.auction.isAdvancing = false;
+      scheduleAutoAdvance(room, AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS, 'missing_player_record');
+      return;
+    }
 
     if (state.auction.highestBidderId) {
       state.auction.phase = 'sold';
@@ -282,17 +329,21 @@ const resolveCurrentPlayer = (room: Room) => {
     ALL_TEAM_IDS.forEach(id => { state.teams[id].status = 'idle'; });
     emitRoomState(state.roomCode);
 
-    room.autoAdvanceTimeout = setTimeout(() => {
-      advanceToNextPlayer(room);
-    }, 4000);
+    scheduleAutoAdvance(room, AUCTION_DELAY_RESOLVE_TO_NEXT_MS, 'resolve_complete');
   } catch (error) {
     console.error(`[CRITICAL] Error in resolveCurrentPlayer for room ${room.state.roomCode}:`, error);
   }
 };
 
-const advanceToNextPlayer = (room: Room) => {
+const advanceToNextPlayer = (room: Room, reason: string = 'unknown') => {
   try {
     const state = room.state;
+
+    if (room.biddingStartTimeout) {
+      clearTimeout(room.biddingStartTimeout);
+      room.biddingStartTimeout = null;
+    }
+
     state.auction.phase = 'advancing';
     state.auction.currentPlayerIndex += 1;
     state.auction.currentBid = 0;
@@ -301,31 +352,53 @@ const advanceToNextPlayer = (room: Room) => {
     state.auction.passedTeams = [];
     state.auction.isAdvancing = false;
 
+    while (state.auction.currentPlayerIndex < state.auction.auctionQueue.length) {
+      const candidateId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
+      if (candidateId && getPlayerById(candidateId)) {
+        break;
+      }
+      logAuctionEvent(room, 'advance_skipping_invalid_player', { candidateId, reason });
+      state.auction.currentPlayerIndex += 1;
+    }
+
     if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
+      logAuctionEvent(room, 'auction_complete', { reason });
       io.to(state.roomCode).emit('auction_complete', state);
       return;
     }
 
     const nextPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
+    logAuctionEvent(room, 'player_advancing', { nextPlayerId, reason });
     io.to(state.roomCode).emit('player_advancing', { nextPlayerId, nextPlayerIndex: state.auction.currentPlayerIndex });
     
     emitRoomState(state.roomCode);
 
-    setTimeout(() => {
+    room.biddingStartTimeout = setTimeout(() => {
+      room.biddingStartTimeout = null;
       try {
-        const nextPlayer = getPlayerById(nextPlayerId);
-        if (nextPlayer) {
-          state.auction.currentBid = normalizeBasePrice(nextPlayer.basePrice);
+        if (state.auction.isPaused) {
+          logAuctionEvent(room, 'bidding_start_deferred_due_pause', { nextPlayerId });
+          return;
         }
+        const nextPlayer = getPlayerById(nextPlayerId);
+        if (!nextPlayer) {
+          logAuctionEvent(room, 'advance_missing_next_player', { nextPlayerId });
+          advanceToNextPlayer(room, 'missing_next_player_post_delay');
+          return;
+        }
+        state.auction.currentBid = normalizeBasePrice(nextPlayer.basePrice);
         state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
         state.auction.phase = 'bidding';
+        if (state.auction.ticks <= 0 || Number.isNaN(state.auction.ticks)) {
+          state.auction.ticks = AUCTION_START_TICKS;
+        }
         emitRoomState(state.roomCode);
         startTimer(room);
         scheduleAiBids(room);
       } catch (innerError) {
         console.error(`[CRITICAL] Error in advanceToNextPlayer delayed start:`, innerError);
       }
-    }, 1000);
+    }, AUCTION_DELAY_ADVANCE_TO_BIDDING_MS);
   } catch (error) {
     console.error(`[CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
   }
@@ -335,29 +408,57 @@ const startTimer = (room: Room) => {
   if (room.state.auction.isPaused) return;
   if (room.timerInterval) return;
   if (room.state.auction.isAdvancing) return;
+  if (room.state.auction.phase !== 'bidding') return;
+  if (room.state.auction.currentPlayerIndex >= room.state.auction.auctionQueue.length) return;
 
-  if (room.state.auction.ticks <= 0) {
-    room.state.auction.ticks = 100;
+  if (!Number.isFinite(room.state.auction.ticks) || room.state.auction.ticks <= 0) {
+    room.state.auction.ticks = AUCTION_START_TICKS;
   }
+
+  logAuctionEvent(room, 'timer_started');
   
   room.timerInterval = setInterval(() => {
-    if (room.state.auction.isPaused) {
-      if (room.timerInterval) clearInterval(room.timerInterval);
-      room.timerInterval = null;
-      return;
-    }
-    room.state.auction.ticks -= 1;
-    io.to(room.state.roomCode).emit('timer_update', { ticks: room.state.auction.ticks, timer: room.state.auction.ticks / 10 });
-    
-    if (room.state.auction.ticks <= 0) {
-      if (room.timerInterval) clearInterval(room.timerInterval);
-      room.timerInterval = null;
+    try {
+      if (room.state.auction.isPaused || room.state.auction.phase !== 'bidding') {
+        if (room.timerInterval) clearInterval(room.timerInterval);
+        room.timerInterval = null;
+        logAuctionEvent(room, 'timer_stopped_non_bidding_or_paused');
+        return;
+      }
+
+      if (room.state.auction.currentPlayerIndex >= room.state.auction.auctionQueue.length) {
+        if (room.timerInterval) clearInterval(room.timerInterval);
+        room.timerInterval = null;
+        io.to(room.state.roomCode).emit('auction_complete', room.state);
+        logAuctionEvent(room, 'timer_stopped_queue_complete');
+        return;
+      }
+
+      room.state.auction.ticks -= 1;
+      if (!Number.isFinite(room.state.auction.ticks)) {
+        room.state.auction.ticks = AUCTION_START_TICKS;
+      }
+      io.to(room.state.roomCode).emit('timer_update', { ticks: room.state.auction.ticks, timer: room.state.auction.ticks / 10 });
       
-      if (room.state.auction.isAdvancing) return;
-      room.state.auction.isAdvancing = true;
-      resolveCurrentPlayer(room);
+      if (room.state.auction.ticks > 0 && room.state.auction.ticks % 10 === 0) {
+        logAuctionEvent(room, 'timer_tick_second', { ticks: room.state.auction.ticks });
+      }
+
+      if (room.state.auction.ticks <= 0) {
+        if (room.timerInterval) clearInterval(room.timerInterval);
+        room.timerInterval = null;
+        
+        if (room.state.auction.isAdvancing) return;
+        room.state.auction.isAdvancing = true;
+        logAuctionEvent(room, 'timer_expired_resolving_player');
+        resolveCurrentPlayer(room);
+      }
+    } catch (tickError) {
+      if (room.timerInterval) clearInterval(room.timerInterval);
+      room.timerInterval = null;
+      console.error(`[CRITICAL] Timer loop failure for room ${room.state.roomCode}:`, tickError);
     }
-  }, 100);
+  }, AUCTION_TIMER_TICK_MS);
 };
 
 io.on('connection', (socket: Socket) => {
@@ -389,7 +490,7 @@ io.on('connection', (socket: Socket) => {
         currentBid: 0,
         nextBidAmount: null,
         highestBidderId: null,
-        ticks: 100,
+        ticks: AUCTION_START_TICKS,
         phase: 'waiting',
         passedTeams: [],
         isAdvancing: false,
@@ -404,6 +505,7 @@ io.on('connection', (socket: Socket) => {
       state: roomState,
       timerInterval: null,
       autoAdvanceTimeout: null,
+      biddingStartTimeout: null,
       aiTimeouts: [],
       deletionTimeout: null
     });
@@ -498,9 +600,24 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
+    clearAllTimers(room);
     room.state.isLocked = true;
-    room.state.auction.isStarted = true;
-    room.state.auction.auctionQueue = createAuctionQueue();
+
+    const auctionQueue = createAuctionQueue();
+    room.state.auction = {
+      isStarted: true,
+      currentPlayerIndex: 0,
+      auctionQueue,
+      currentBid: 0,
+      nextBidAmount: null,
+      highestBidderId: null,
+      ticks: AUCTION_START_TICKS,
+      phase: 'waiting',
+      passedTeams: [],
+      isAdvancing: false,
+      currentSetName: '',
+      isPaused: false
+    };
     
     const firstPlayerId = room.state.auction.auctionQueue[0];
     const firstPlayer = getPlayerById(firstPlayerId);
@@ -509,6 +626,7 @@ io.on('connection', (socket: Socket) => {
     }
     room.state.auction.currentSetName = getSetNameForPlayer(firstPlayerId);
     room.state.auction.phase = 'bidding';
+    logAuctionEvent(room, 'auction_started');
     
     emitRoomState(roomCode);
     startTimer(room);
@@ -560,7 +678,7 @@ io.on('connection', (socket: Socket) => {
       currentBid: 0,
       nextBidAmount: null,
       highestBidderId: null,
-      ticks: 100,
+      ticks: AUCTION_START_TICKS,
       phase: 'waiting',
       passedTeams: [],
       isAdvancing: false,
@@ -619,6 +737,7 @@ io.on('connection', (socket: Socket) => {
     if (room.state.auction.isPaused) {
       // Pause: clear all active timers/timeouts
       clearAllTimers(room);
+      logAuctionEvent(room, 'auction_paused');
     } else {
       // Resume: restart timers based on the current phase
       const phase = room.state.auction.phase;
@@ -626,14 +745,11 @@ io.on('connection', (socket: Socket) => {
         startTimer(room);
         scheduleAiBids(room);
       } else if (phase === 'sold' || phase === 'unsold') {
-        room.autoAdvanceTimeout = setTimeout(() => {
-          advanceToNextPlayer(room);
-        }, 4000);
+        scheduleAutoAdvance(room, AUCTION_DELAY_RESOLVE_TO_NEXT_MS, 'resume_from_result_phase');
       } else if (phase === 'advancing') {
-        room.autoAdvanceTimeout = setTimeout(() => {
-          advanceToNextPlayer(room);
-        }, 1000);
+        scheduleAutoAdvance(room, AUCTION_DELAY_ADVANCE_TO_BIDDING_MS, 'resume_from_advancing_phase');
       }
+      logAuctionEvent(room, 'auction_resumed', { phase });
     }
 
     emitRoomState(roomCode);
