@@ -110,11 +110,63 @@ const getCurrentPlayerId = (state: RoomState): string | null => {
   return state.auction.auctionQueue[state.auction.currentPlayerIndex] ?? null;
 };
 
+// --- DIAGNOSTICS & TELEMETRY ---
+let lastTickTime = Date.now();
+setInterval(() => {
+  const currentTime = Date.now();
+  const lag = currentTime - lastTickTime - 2000;
+  if (lag > 100) {
+    console.warn(`[DIAGNOSTICS: PERFORMANCE] Event loop lag detected: ${lag}ms`);
+    if (lag > 500) {
+      console.warn(`[DIAGNOSTICS: MEMORY] Heavy lag snapshot:`, process.memoryUsage());
+    }
+  }
+  lastTickTime = currentTime;
+}, 2000);
+
+const lastObservedTicks = new Map<string, { ticks: number, timestamp: number }>();
+setInterval(() => {
+  try {
+    rooms.forEach((room, roomCode) => {
+      const state = room.state.auction;
+      if (state.phase === 'bidding' && !state.isPaused && !state.isAdvancing) {
+        const lastObserved = lastObservedTicks.get(roomCode);
+        if (lastObserved) {
+          if (lastObserved.ticks === state.ticks) {
+            const timeSinceStuck = Date.now() - lastObserved.timestamp;
+            if (timeSinceStuck > 10000) { // 10 seconds stuck
+              console.error(`[DIAGNOSTICS: FREEZE WATCHDOG] CRITICAL: Room ${roomCode} timer is frozen for ${timeSinceStuck}ms!`);
+              console.error(`[DIAGNOSTICS: FREEZE WATCHDOG] Room State Dump:`, {
+                auction: state,
+                playersCount: room.state.players.length,
+                activePlayersCount: room.state.players.filter(p => p.socketId !== '').length,
+                hasTimerInterval: room.timerInterval !== null,
+                hasAutoAdvance: room.autoAdvanceTimeout !== null,
+                hasBiddingStart: room.biddingStartTimeout !== null
+              });
+              lastObserved.timestamp = Date.now();
+            }
+          } else {
+            lastObservedTicks.set(roomCode, { ticks: state.ticks, timestamp: Date.now() });
+          }
+        } else {
+          lastObservedTicks.set(roomCode, { ticks: state.ticks, timestamp: Date.now() });
+        }
+      } else {
+        lastObservedTicks.delete(roomCode);
+      }
+    });
+  } catch (err) {
+    console.error(`[DIAGNOSTICS: ERROR] Watchdog failure:`, err);
+  }
+}, 5000);
+// --- END DIAGNOSTICS ---
+
 const logAuctionEvent = (room: Room, event: string, meta: Record<string, unknown> = {}) => {
   const auction = room.state.auction;
   const currentPlayerId = getCurrentPlayerId(room.state);
   console.log(
-    `[Auction ${room.state.roomCode}] ${event} :: phase=${auction.phase} idx=${auction.currentPlayerIndex}/${auction.auctionQueue.length} ticks=${auction.ticks} paused=${auction.isPaused} advancing=${auction.isAdvancing} current=${currentPlayerId ?? 'none'} ${JSON.stringify(meta)}`
+    `[DIAGNOSTICS: AUCTION] ${room.state.roomCode} :: ${event} :: phase=${auction.phase} idx=${auction.currentPlayerIndex}/${auction.auctionQueue.length} ticks=${auction.ticks} paused=${auction.isPaused} advancing=${auction.isAdvancing} current=${currentPlayerId ?? 'none'} ${JSON.stringify(meta)}`
   );
 };
 
@@ -191,7 +243,7 @@ const emitRoomState = (roomCode: string) => {
     io.to(roomCode).emit('room_state_update', room.state);
     logAuctionEvent(room, 'room_state_emitted', { clientCount });
   } catch (error) {
-    console.error(`[CRITICAL] Error emitting room state for ${roomCode}:`, error);
+    console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error emitting room state for ${roomCode}:`, error);
   }
 };
 
@@ -242,7 +294,7 @@ const scheduleAutoAdvance = (room: Room, delayMs: number, reason: string) => {
       }
       advanceToNextPlayer(timeoutRoom, reason);
     } catch (error) {
-      console.error(`[CRITICAL] Error in scheduleAutoAdvance timeout for ${roomCode}:`, error);
+      console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in scheduleAutoAdvance timeout for ${roomCode}:`, error);
     }
   }, delayMs);
   logAuctionEvent(room, 'auto_advance_scheduled', { delayMs, reason });
@@ -280,63 +332,68 @@ const addChatMessage = (room: Room, msg: Omit<ChatMessage, 'id' | 'timestamp'>) 
 };
 
 const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boolean => {
-  const state = room.state;
-  if (state.auction.isPaused) return false;
-  if (state.auction.phase !== 'bidding') return false;
-  if (state.auction.isAdvancing) return false;
-  
-  const player = getCurrentAuctionPlayer(state);
-  if (!player) return false;
-  
-  const normalizedAmount = getAuthoritativeNextBid(state);
-  if (normalizedAmount === null) {
-    return false;
-  }
-
-  // AI bidding is completely disabled. Reject all AI bids.
-  if (isAI) {
-    return false;
-  }
-
-  const team = state.teams[teamId];
-  
-  // Verify team is owned by an active human player in the room
-  const owningPlayer = state.players.find(p => p.teamId === teamId);
-  if (!owningPlayer || team.ownerId !== owningPlayer.socketId) {
-    return false;
-  }
-
-  if (team.purseRemaining < normalizedAmount) return false;
-  if (team.squad.length >= MAX_SQUAD_SIZE) return false;
-  if (player.isOverseas && team.overseasCount >= MAX_OVERSEAS_PLAYERS) return false;
-
-  state.auction.currentBid = normalizedAmount;
-  state.auction.highestBidderId = teamId;
-  
-  ALL_TEAM_IDS.forEach(id => {
-    if (state.teams[id].status === 'leading') {
-      state.teams[id].status = 'idle';
+  try {
+    const state = room.state;
+    if (state.auction.isPaused) return false;
+    if (state.auction.phase !== 'bidding') return false;
+    if (state.auction.isAdvancing) return false;
+    
+    const player = getCurrentAuctionPlayer(state);
+    if (!player) return false;
+    
+    const normalizedAmount = getAuthoritativeNextBid(state);
+    if (normalizedAmount === null) {
+      return false;
     }
-  });
-  team.status = 'leading';
-  
-  state.auction.ticks = AUCTION_START_TICKS;
-  syncAuctionDerivedState(state);
-  
-  io.to(state.roomCode).emit('bid_placed', { teamId, teamName: teamId, amount: normalizedAmount, isAI });
-  
-  addChatMessage(room, {
-    type: 'system_bid',
-    teamId,
-    playerName: player.name,
-    amount: normalizedAmount
-  });
 
-  emitRoomState(state.roomCode);
-  
-  scheduleAiBids(room);
-  
-  return true;
+    // AI bidding is completely disabled. Reject all AI bids.
+    if (isAI) {
+      return false;
+    }
+
+    const team = state.teams[teamId];
+    
+    // Verify team is owned by an active human player in the room
+    const owningPlayer = state.players.find(p => p.teamId === teamId);
+    if (!owningPlayer || team.ownerId !== owningPlayer.socketId) {
+      return false;
+    }
+
+    if (team.purseRemaining < normalizedAmount) return false;
+    if (team.squad.length >= MAX_SQUAD_SIZE) return false;
+    if (player.isOverseas && team.overseasCount >= MAX_OVERSEAS_PLAYERS) return false;
+
+    state.auction.currentBid = normalizedAmount;
+    state.auction.highestBidderId = teamId;
+    
+    ALL_TEAM_IDS.forEach(id => {
+      if (state.teams[id].status === 'leading') {
+        state.teams[id].status = 'idle';
+      }
+    });
+    team.status = 'leading';
+    
+    state.auction.ticks = Number(process.env.AUCTION_START_TICKS ?? 100);
+    syncAuctionDerivedState(state);
+    
+    io.to(state.roomCode).emit('bid_placed', { teamId, teamName: teamId, amount: normalizedAmount, isAI });
+    
+    addChatMessage(room, {
+      type: 'system_bid',
+      teamId,
+      playerName: player.name,
+      amount: normalizedAmount
+    });
+
+    emitRoomState(state.roomCode);
+    
+    scheduleAiBids(room);
+    
+    return true;
+  } catch (error) {
+    console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in placeBid for room ${room.state.roomCode}:`, error);
+    return false;
+  }
 };
 
 const resolveCurrentPlayer = (room: Room) => {
@@ -419,7 +476,7 @@ const resolveCurrentPlayer = (room: Room) => {
 
     scheduleAutoAdvance(currentRoom, AUCTION_DELAY_RESOLVE_TO_NEXT_MS, 'resolve_complete');
   } catch (error) {
-    console.error(`[CRITICAL] Error in resolveCurrentPlayer for room ${room.state.roomCode}:`, error);
+    console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in resolveCurrentPlayer for room ${room.state.roomCode}:`, error);
   }
 };
 
@@ -503,11 +560,11 @@ const advanceToNextPlayer = (room: Room, reason: string = 'unknown') => {
         startTimer(timeoutRoom);
         scheduleAiBids(timeoutRoom);
       } catch (innerError) {
-        console.error(`[CRITICAL] Error in advanceToNextPlayer delayed start for ${roomCode}:`, innerError);
+        console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in advanceToNextPlayer delayed start for ${roomCode}:`, innerError);
       }
     }, AUCTION_DELAY_ADVANCE_TO_BIDDING_MS);
   } catch (error) {
-    console.error(`[CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
+    console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
   }
 };
 
@@ -524,6 +581,7 @@ const startTimer = (room: Room) => {
 
   const roomCode = room.state.roomCode;
   const capturedGeneration = room.roomGeneration;
+  console.log(`[DIAGNOSTICS: TIMER] Starting timer for room ${roomCode}`);
   logAuctionEvent(room, 'timer_started');
   
   room.timerInterval = setInterval(() => {
@@ -586,7 +644,7 @@ const startTimer = (room: Room) => {
         resolveCurrentPlayer(currentRoom);
       }
     } catch (tickError) {
-      console.error(`[CRITICAL] Timer loop failure for room ${roomCode}:`, tickError);
+      console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Timer loop failure for room ${roomCode}:`, tickError);
       // Ensure interval is killed even if error occurred
       const errorRoom = rooms.get(roomCode);
       if (errorRoom && errorRoom.timerInterval) {
@@ -599,7 +657,8 @@ const startTimer = (room: Room) => {
 
 io.on('connection', (socket: Socket) => {
   socket.on('create_room', ({ playerName, userId }: { playerName: string, userId: string }) => {
-    const roomCode = generateRoomCode();
+    try {
+      const roomCode = generateRoomCode();
     
     const initialTeams = {} as Record<TeamId, TeamState>;
     ALL_TEAM_IDS.forEach(id => {
@@ -649,11 +708,13 @@ io.on('connection', (socket: Socket) => {
 
     socket.join(roomCode);
     socket.emit('room_created', { roomCode });
-    console.log(`[Room] Created room ${roomCode} for ${playerName} (${userId})`);
+    console.log(`[DIAGNOSTICS: ROOM] Created room ${roomCode} for ${playerName} (${userId})`);
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(create_room) failed:`, err); }
   });
 
   socket.on('join_room', ({ roomCode, playerName, userId }: { roomCode: string, playerName: string, userId: string }) => {
+    try {
     const room = rooms.get(roomCode);
     if (!room) {
       emitRoomUnavailable(socket, roomCode, 'join_room');
@@ -715,10 +776,12 @@ io.on('connection', (socket: Socket) => {
     socket.join(roomCode);
     socket.emit('room_joined', { roomCode });
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(join_room) failed:`, err); }
   });
 
   socket.on('select_team', ({ roomCode, teamId }: { roomCode: string, teamId: TeamId }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'select_team');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'select_team');
     if (!room) return;
     
     const player = room.state.players.find(p => p.socketId === socket.id);
@@ -741,10 +804,12 @@ io.on('connection', (socket: Socket) => {
     room.state.teams[teamId].ownerName = player.name;
 
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(select_team) failed:`, err); }
   });
 
   socket.on('start_auction', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'start_auction');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'start_auction');
     if (!room) {
       console.error(`[Auction] Start failed: room ${roomCode} not found`);
       return;
@@ -795,10 +860,12 @@ io.on('connection', (socket: Socket) => {
     emitRoomState(roomCode);
     startTimer(room);
     scheduleAiBids(room);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(start_auction) failed:`, err); }
   });
 
   socket.on('place_bid', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'place_bid');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'place_bid');
     if (!room) return;
     const player = room.state.players.find(p => p.socketId === socket.id);
     if (!player || !player.teamId) return;
@@ -812,10 +879,12 @@ io.on('connection', (socket: Socket) => {
           : `Invalid bid. Next valid amount is ${formatAuctionMoney(expectedBid)}.`,
       });
     }
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(place_bid) failed:`, err); }
   });
 
   socket.on('pass_bid', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'pass_bid');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'pass_bid');
     if (!room || room.state.auction.phase !== 'bidding') return;
     
     const player = room.state.players.find(p => p.socketId === socket.id);
@@ -826,10 +895,12 @@ io.on('connection', (socket: Socket) => {
       room.state.teams[player.teamId].status = 'passed';
       emitRoomState(roomCode);
     }
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(pass_bid) failed:`, err); }
   });
 
   socket.on('reset_room', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'reset_room');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'reset_room');
     if (!room || room.state.hostId !== socket.id) return;
     
     clearAllTimers(room);
@@ -873,10 +944,12 @@ io.on('connection', (socket: Socket) => {
     // Inform all clients to go to lobby
     io.to(roomCode).emit('room_reset');
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(reset_room) failed:`, err); }
   });
 
   socket.on('send_chat', ({ roomCode, text }: { roomCode: string, text: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'send_chat');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'send_chat');
     if (!room) return;
     const player = room.state.players.find(p => p.socketId === socket.id);
     if (!player) return;
@@ -889,10 +962,12 @@ io.on('connection', (socket: Socket) => {
     });
 
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(send_chat) failed:`, err); }
   });
 
   socket.on('toggle_pause', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'toggle_pause');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'toggle_pause');
     if (!room) {
       console.error(`[Pause] Toggle failed: room ${roomCode} not found`);
       return;
@@ -928,10 +1003,12 @@ io.on('connection', (socket: Socket) => {
     }
 
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(toggle_pause) failed:`, err); }
   });
 
   socket.on('end_auction', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'end_auction');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'end_auction');
     if (!room || room.state.hostId !== socket.id) return;
 
     clearAllTimers(room);
@@ -939,9 +1016,11 @@ io.on('connection', (socket: Socket) => {
     room.state.auction.phase = 'waiting'; // Skip to results
     io.to(roomCode).emit('auction_complete', room.state);
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(end_auction) failed:`, err); }
   });
 
   const handleLeaveRoom = (socketId: string, isDisconnect: boolean = false) => {
+    try {
     rooms.forEach((room, roomCode) => {
       const playerIndex = room.state.players.findIndex(p => p.socketId === socketId);
       if (playerIndex !== -1) {
@@ -1090,6 +1169,7 @@ io.on('connection', (socket: Socket) => {
       }
       }
     });
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] handleLeaveRoom failed:`, err); }
   };
 
   socket.on('leave_room', () => {
@@ -1097,7 +1177,8 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('kick_player', ({ roomCode, targetSocketId }: { roomCode: string, targetSocketId: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'kick_player');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'kick_player');
     if (!room || room.state.hostId !== socket.id) return;
     
     // Find player and remove them
@@ -1120,6 +1201,7 @@ io.on('connection', (socket: Socket) => {
 
       emitRoomState(roomCode);
     }
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(kick_player) failed:`, err); }
   });
 
   socket.on('disconnect', () => {
@@ -1127,10 +1209,12 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on('request_room_state', ({ roomCode }: { roomCode: string }) => {
-    const room = getRoomOrNotify(socket, roomCode, 'request_room_state');
+    try {
+      const room = getRoomOrNotify(socket, roomCode, 'request_room_state');
     if (!room) return;
     socket.join(roomCode);
     emitRoomState(roomCode);
+    } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(request_room_state) failed:`, err); }
   });
 });
 
