@@ -252,10 +252,6 @@ export const useSocket = () => {
     if (socket) socket.emit('end_auction', { roomCode });
   }, [socket]);
 
-  const skipCurrentSet = useCallback((roomCode: string) => {
-    if (socket) socket.emit('skip_current_set', { roomCode });
-  }, [socket]);
-
   const sendChat = useCallback((roomCode: string, text: string) => {
     if (socket) socket.emit('send_chat', { roomCode, text });
   }, [socket]);
@@ -297,7 +293,6 @@ export const useSocket = () => {
     sendChat,
     leaveRoom,
     kickPlayer,
-    skipCurrentSet,
     videoManager,
   };
 };
