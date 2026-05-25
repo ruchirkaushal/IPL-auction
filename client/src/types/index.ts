@@ -74,6 +74,7 @@ export interface AuctionState {
 
 export interface RoomPlayer {
   socketId: string;
+  userId: string;
   name: string;
   teamId: TeamId | null;
   isHost: boolean;

@@ -70,3 +70,13 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes shimmer {
   100% { transform: skewX(-12deg) translateX(200%); }
 }
+
+@keyframes bidPulse {
+  0% { transform: scale(1); color: #F5A623; }
+  30% { transform: scale(1.18); color: #FFFFFF; }
+  100% { transform: scale(1); color: #F5A623; }
+}
+
+.animate-bidPulse {
+  animation: bidPulse 500ms ease-out;
+}

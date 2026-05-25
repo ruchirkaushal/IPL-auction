@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocketContext } from '../SocketContext';
 import type { Player, TeamId } from '../types';
@@ -10,16 +10,8 @@ import { TEAMS } from '../constants/teams';
 export default function Summary() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
-  const { roomState, resetRoom, socket } = useSocketContext();
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const { roomState, resetRoom, socket, allPlayers } = useSocketContext();
   const [copiedTeam, setCopiedTeam] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3005'}/api/players`)
-      .then(res => res.json())
-      .then(data => setAllPlayers(data))
-      .catch(console.error);
-  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -33,20 +25,15 @@ export default function Summary() {
   }, [socket, navigate, roomCode]);
 
   useEffect(() => {
-    if (socket && (!roomState || allPlayers.length === 0)) {
+    if (socket && !roomState) {
       const playerName = localStorage.getItem('playerName');
       if (!playerName) {
         navigate(`/?roomCode=${roomCode}`);
         return;
       }
-      const timer = setTimeout(() => {
-        if (!roomState) {
-          navigate(`/?roomCode=${roomCode}`);
-        }
-      }, 8000);
-      return () => clearTimeout(timer);
+      // Keep users on the summary screen while reconnecting or waiting for final room state.
     }
-  }, [socket, roomState, allPlayers.length, roomCode, navigate]);
+  }, [socket, roomState, roomCode, navigate]);
 
   const { teamData, mostExpensivePlayer } = useMemo(() => {
     if (!roomState || allPlayers.length === 0) return { teamData: [], mostExpensivePlayer: null as { player: Player, teamId: TeamId, price: number } | null };

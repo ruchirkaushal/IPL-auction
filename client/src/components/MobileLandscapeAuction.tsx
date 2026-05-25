@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import type { RefObject } from 'react';
+import type { Socket } from 'socket.io-client';
+import type { RoomState, Player, VideoPhase } from '../types';
 import toast from 'react-hot-toast';
 import TeamPanel from './TeamPanel';
 import VideoPlayer from './VideoPlayer';
@@ -7,18 +10,27 @@ import PlayerDatabase from './PlayerDatabase';
 import { TEAMS } from '../constants/teams';
 import '../mobileLandscape.css';
 
+type VideoManager = {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  videoPhase: VideoPhase;
+  introFrozen: boolean;
+  markGraphicsReady: () => void;
+  auctionReadyForBids: boolean;
+  bidCooldownFrozen: boolean;
+};
+
 interface AuctionLayoutProps {
   roomCode: string;
-  roomState: any;
-  allPlayers: any;
+  roomState: RoomState;
+  allPlayers: Player[];
   myTeamId: string | null;
-  socket: any;
-  videoManager: any;
+  socket: Socket | null;
+  videoManager: VideoManager;
   canBid: boolean;
   canUserBid: boolean;
   isHost: boolean;
-  soldPlayers: any[];
-  unsoldPlayers: any[];
+  soldPlayers: { playerId: string; teamId: string; amount: number }[];
+  unsoldPlayers: string[];
   highestBidderId: string | null;
   actions: {
     placeBid: (code: string) => void;
@@ -43,7 +55,6 @@ export default function MobileLandscapeAuction({
   actions
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
-  const [isLocalPaused, setIsLocalPaused] = useState(false);
 
   return (
     <div className="mobile-landscape-mode flex flex-row w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30 text-xs">
@@ -150,59 +161,44 @@ export default function MobileLandscapeAuction({
         </div>
 
         {/* Pause Overlay */}
-        {(roomState.auction.isPaused || isLocalPaused) && (
+        {roomState.auction.isPaused && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="text-center w-full max-w-[200px] px-2">
               <h1 className="text-lg font-black tracking-tight text-white uppercase mb-2">
-                {roomState.auction.isPaused ? "Paused" : "Menu"}
+                Paused
               </h1>
               
               <div className="space-y-2 w-full">
-                {roomState.auction.isPaused ? (
+                {isHost && (
                   <>
-                    {isHost && (
-                      <>
-                        <button
-                          onClick={() => actions.togglePause(roomCode || '')}
-                          className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
-                        >
-                          Resume
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm("Restart the auction?")) actions.resetRoom(roomCode || '');
-                          }}
-                          className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-white/5 border border-white/10 text-white"
-                        >
-                          Restart
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm("End the auction?")) actions.endAuction(roomCode || '');
-                          }}
-                          className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-red-500/15 border border-red-500/30 text-red-400"
-                        >
-                          End
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {!isHost && (
-                      <button
-                        onClick={() => setIsLocalPaused(false)}
-                        className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
-                      >
-                        Resume
-                      </button>
-                    )}
+                    <button
+                      onClick={() => actions.togglePause(roomCode || '')}
+                      className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
+                    >
+                      Resume
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Restart the auction?")) actions.resetRoom(roomCode || '');
+                      }}
+                      className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-white/5 border border-white/10 text-white"
+                    >
+                      Restart
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("End the auction?")) actions.endAuction(roomCode || '');
+                      }}
+                      className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-red-500/15 border border-red-500/30 text-red-400"
+                    >
+                      End
+                    </button>
                   </>
                 )}
 
                 <button
                   onClick={() => {
-                    if (confirm("Leave auction?")) {
+                    if (confirm("Leave auction? If you are the only player, the room may be deleted. You can rejoin within 2 minutes using the same room code.")) {
                       actions.leaveRoom();
                       actions.navigate('/');
                     }

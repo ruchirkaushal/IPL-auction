@@ -84,6 +84,10 @@ interface Room {
 const rooms = new Map<string, Room>();
 const reconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
+const getReconnectKey = (roomCode: string, player: { userId?: string; name: string }) => {
+  return `${roomCode}_${player.userId ?? player.name}`;
+};
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -418,13 +422,16 @@ io.on('connection', (socket: Socket) => {
       room.deletionTimeout = null;
     }
 
-    // Clear reconnect timeout if any
-    const key = `${roomCode}_${playerName}`;
-    const pendingTimeout = reconnectTimeouts.get(key);
-    if (pendingTimeout) {
-      clearTimeout(pendingTimeout);
-      reconnectTimeouts.delete(key);
-    }
+    // Clear reconnect timeout if any, using stable user IDs and legacy name fallback.
+    const reconnectKey = `${roomCode}_${userId}`;
+    const legacyKey = `${roomCode}_${playerName}`;
+    [reconnectKey, legacyKey].forEach((key) => {
+      const pendingTimeout = reconnectTimeouts.get(key);
+      if (pendingTimeout) {
+        clearTimeout(pendingTimeout);
+        reconnectTimeouts.delete(key);
+      }
+    });
 
     // Use userId for strong identity. Fallback to name for legacy clients if needed.
     const existingPlayerIndex = room.state.players.findIndex(p => p.userId === userId || (p.userId === undefined && p.name === playerName));
@@ -485,9 +492,9 @@ io.on('connection', (socket: Socket) => {
     const room = rooms.get(roomCode);
     if (!room || room.state.hostId !== socket.id) return;
     
-    // Check if all players ready
-    if (!room.state.players.every(p => p.isReady)) {
-      socket.emit('error', { message: 'Not all players are ready' });
+    // Check that every player both selected a team and is ready.
+    if (!room.state.players.every(p => p.isReady && p.teamId !== null)) {
+      socket.emit('error', { message: 'All managers must select a team before starting the auction.' });
       return;
     }
 
@@ -560,6 +567,7 @@ io.on('connection', (socket: Socket) => {
       currentSetName: '',
       isPaused: false
     };
+    room.state.isLocked = false;
     
     // Reset team states
     ALL_TEAM_IDS.forEach(teamId => {
@@ -651,15 +659,16 @@ io.on('connection', (socket: Socket) => {
         if (isDisconnect) {
           // 1. Mark socket as empty
           player.socketId = '';
-          if (player.teamId) {
+          if (player.teamId && !room.state.isLocked) {
             room.state.teams[player.teamId].ownerId = null;
+            room.state.teams[player.teamId].ownerName = null;
           }
 
           // Emit immediately so other players see they went offline
           emitRoomState(roomCode);
 
-          // 2. Set up the reconnect grace period (10 seconds)
-          const key = `${roomCode}_${player.name}`;
+          // 2. Set up the reconnect grace period (120 seconds)
+          const key = getReconnectKey(roomCode, player);
           
           // Clear any existing timeout for this player
           const oldTimeout = reconnectTimeouts.get(key);
@@ -672,7 +681,7 @@ io.on('connection', (socket: Socket) => {
             const currentRoom = rooms.get(roomCode);
             if (!currentRoom) return;
 
-            const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.name === player.name);
+            const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.userId === player.userId || p.name === player.name);
             if (currentPlayerIndex === -1) return;
 
             const currentPlayer = currentRoom.state.players[currentPlayerIndex];
@@ -726,27 +735,40 @@ io.on('connection', (socket: Socket) => {
           return;
         }
 
-        // --- Explicit Leave Room (socket.emit('leave_room')) ---
-        // Cancel any pending reconnect timeout
-        const key = `${roomCode}_${player.name}`;
+      if (!isDisconnect && room.state.isLocked) {
+        // Treat explicit room leave during a live auction as a temporary disconnect.
+        const clientSocket = io.sockets.sockets.get(socketId);
+        if (clientSocket) {
+          clientSocket.leave(roomCode);
+        }
+        handleLeaveRoom(socketId, true);
+        return;
+      }
+
+      // --- Explicit Leave Room (socket.emit('leave_room')) ---
+      // Cancel any pending reconnect timeout
+      const explicitKey = getReconnectKey(roomCode, player);
+      const legacyExplicitKey = `${roomCode}_${player.name}`;
+      [explicitKey, legacyExplicitKey].forEach((key) => {
         const pending = reconnectTimeouts.get(key);
         if (pending) {
           clearTimeout(pending);
           reconnectTimeouts.delete(key);
         }
+      });
 
-        if (player.teamId) {
-          room.state.teams[player.teamId].ownerId = null;
-          room.state.teams[player.teamId].ownerName = null;
-        }
-        room.state.players.splice(playerIndex, 1);
-        
-        const clientSocket = io.sockets.sockets.get(socketId);
-        if (clientSocket) {
-          clientSocket.leave(roomCode);
-        }
+      if (player.teamId) {
+        room.state.teams[player.teamId].ownerId = null;
+        room.state.teams[player.teamId].ownerName = null;
+      }
+      room.state.players.splice(playerIndex, 1);
+      
+      const clientSocket = io.sockets.sockets.get(socketId);
+      if (clientSocket) {
+        clientSocket.leave(roomCode);
+      }
 
-        const activePlayers = room.state.players.filter(p => p.socketId !== '');
+      const activePlayers = room.state.players.filter(p => p.socketId !== '');
         if (activePlayers.length === 0) {
           clearAllTimers(room);
           rooms.delete(roomCode);

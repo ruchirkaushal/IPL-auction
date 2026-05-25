@@ -16,36 +16,24 @@ export default function Lobby() {
     }
   }, [roomState?.auction.isStarted, roomCode, navigate]);
 
-  useEffect(() => {
-    if (socket && !roomState) {
-      const playerName = localStorage.getItem('playerName');
-      if (!playerName) {
-        navigate(`/?roomCode=${roomCode}`);
-        return;
-      }
-      const timer = setTimeout(() => {
-        if (!roomState) {
-          navigate(`/?roomCode=${roomCode}`);
-        }
-      }, 8000);
-      return () => clearTimeout(timer);
-    }
-  }, [socket, roomState, roomCode, navigate]);
-
-  // Toast for player join/leave
-  const prevPlayerCount = useRef(0);
+  // Toast for player join/leave using stable user IDs to avoid reconnect bounce alerts
+  const prevPlayerIds = useRef<string[]>([]);
   useEffect(() => {
     if (!roomState) return;
-    const currentCount = roomState.players.length;
-    if (currentCount > prevPlayerCount.current && prevPlayerCount.current > 0) {
-      const newest = roomState.players[currentCount - 1];
-      toast(`${newest.name} joined the arena! 🏟️`, { 
-        duration: 3000,
-        style: { borderRadius: '12px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b' }
-      });
+    const currentPlayerIds = roomState.players.map(p => p.userId ?? p.name);
+    const newIds = currentPlayerIds.filter(id => !prevPlayerIds.current.includes(id));
+    if (newIds.length > 0 && prevPlayerIds.current.length > 0) {
+      const newestId = newIds[newIds.length - 1];
+      const newest = roomState.players.find(p => (p.userId ?? p.name) === newestId);
+      if (newest) {
+        toast(`${newest.name} joined the arena! 🏟️`, { 
+          duration: 3000,
+          style: { borderRadius: '12px', background: '#0f172a', color: '#fff', border: '1px solid #1e293b' }
+        });
+      }
     }
-    prevPlayerCount.current = currentCount;
-  }, [roomState?.players.length]);
+    prevPlayerIds.current = currentPlayerIds;
+  }, [roomState?.players]);
 
   useEffect(() => {
     if (!socket) return;

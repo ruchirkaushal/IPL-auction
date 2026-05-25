@@ -37,17 +37,6 @@ const AnimatedBidValue = ({
   }, [value, basePrice, displayValue, highestBidderId]);
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes bidPulse {
-          0% { transform: scale(1); color: #F5A623; }
-          30% { transform: scale(1.18); color: #FFFFFF; }
-          100% { transform: scale(1); color: #F5A623; }
-        }
-        .animate-bidPulse {
-          animation: bidPulse 500ms ease-out;
-        }
-      `}} />
       <span 
         key={animationKey}
         className={`inline-block text-[38px] font-[900] tracking-tight font-inter leading-none ${isNewBid ? 'animate-bidPulse' : ''}`}
@@ -58,7 +47,6 @@ const AnimatedBidValue = ({
       >
         {formatAuctionMoney(displayValue)}
       </span>
-    </>
   );
 };
 
@@ -126,21 +114,19 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
     if (!currentPlayer) return null;
     const { stats, role } = currentPlayer;
     const items = [];
-    items.push({ label: 'MATCHES', value: stats.matches });
 
-    if (role === 'BAT' || role === 'WK') {
-      items.push({ label: 'RUNS', value: stats.runs });
-      items.push({ label: 'STRIKE RATE', value: '142.5' });
-      items.push({ label: '50s/100s', value: '12/2' });
-    } else if (role === 'BOWL') {
-      items.push({ label: 'WICKETS', value: stats.wickets });
-      items.push({ label: 'ECONOMY', value: '7.82' });
-      items.push({ label: 'BEST', value: '4/21' });
-    } else if (role === 'AR') {
-      items.push({ label: 'RUNS', value: stats.runs });
-      items.push({ label: 'STRIKE RATE', value: '135.4' });
-      items.push({ label: 'WICKETS', value: stats.wickets });
-      items.push({ label: 'ECONOMY', value: '8.15' });
+    items.push({ label: 'MATCHES', value: stats.matches ?? 'N/A' });
+
+    if (role === 'BAT' || role === 'WK' || role === 'AR') {
+      items.push({ label: 'RUNS', value: stats.runs ?? 'N/A' });
+    }
+
+    if (role === 'BOWL' || role === 'AR') {
+      items.push({ label: 'WICKETS', value: stats.wickets ?? 'N/A' });
+    }
+
+    if (stats.previousTeam) {
+      items.push({ label: 'PREVIOUS', value: stats.previousTeam });
     }
 
     return items.map((item, i) => (

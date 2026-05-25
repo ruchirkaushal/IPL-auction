@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import type { RefObject } from 'react';
+import type { Socket } from 'socket.io-client';
+import type { RoomState, Player, TeamId, VideoPhase } from '../types';
 import toast from 'react-hot-toast';
 import TeamPanel from './TeamPanel';
 import VideoPlayer from './VideoPlayer';
@@ -6,19 +9,28 @@ import ChatPanel from './ChatPanel';
 import PlayerDatabase from './PlayerDatabase';
 import { TEAMS } from '../constants/teams';
 
+type VideoManager = {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  videoPhase: VideoPhase;
+  introFrozen: boolean;
+  markGraphicsReady: () => void;
+  auctionReadyForBids: boolean;
+  bidCooldownFrozen: boolean;
+};
+
 interface AuctionLayoutProps {
   roomCode: string;
-  roomState: any;
-  allPlayers: any;
+  roomState: RoomState;
+  allPlayers: Player[];
   myTeamId: string | null;
-  socket: any;
-  videoManager: any;
+  socket: Socket | null;
+  videoManager: VideoManager;
   canBid: boolean;
   canUserBid: boolean;
   isHost: boolean;
-  soldPlayers: any[];
-  unsoldPlayers: any[];
-  highestBidderId: string | null;
+  soldPlayers: { playerId: string; teamId: string; amount: number }[];
+  unsoldPlayers: string[];
+  highestBidderId: TeamId | null;
   actions: {
     placeBid: (code: string) => void;
     togglePause: (code: string) => void;
@@ -42,7 +54,6 @@ export default function DesktopAuctionLayout({
   actions
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
-  const [isLocalPaused, setIsLocalPaused] = useState(false);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-blue-500/30">
@@ -146,20 +157,17 @@ export default function DesktopAuctionLayout({
         </div>
 
         {/* Pause Screen Overlay */}
-        {(roomState.auction.isPaused || isLocalPaused) && (
+        {roomState.auction.isPaused && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
             <div className="text-center max-w-md px-6 select-none">
               <div className="w-20 h-20 mx-auto mb-6 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.2)] animate-pulse">
                 <span className="material-symbols-outlined text-red-500 text-[40px]">pause</span>
               </div>
               <h1 className="text-3xl font-black tracking-tight text-white uppercase mb-2">
-                {roomState.auction.isPaused ? "Auction Paused" : "Menu"}
+                Auction Paused
               </h1>
               <p className="text-sm text-gray-400 mb-8 font-medium">
-                {roomState.auction.isPaused 
-                  ? "The Host has paused the session. Bidding and timers are frozen." 
-                  : "Auction is running in the background. Take a break or return to the main lobby."
-                }
+                The Host has paused the session. Bidding and timers are frozen.
               </p>
 
               <div className="space-y-3 w-64 mx-auto pointer-events-auto">
@@ -196,18 +204,7 @@ export default function DesktopAuctionLayout({
                       </>
                     )}
                   </>
-                ) : (
-                  <>
-                    {!isHost && (
-                      <button
-                        onClick={() => setIsLocalPaused(false)}
-                        className="w-full py-3 px-4 font-bold uppercase text-xs tracking-wider rounded-xl transition-all hover:scale-105 bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400 shadow-[0_0_20px_rgba(0,229,255,0.3)]"
-                      >
-                        Resume
-                      </button>
-                    )}
-                  </>
-                )}
+                ) : null}
 
                 <button
                   onClick={() => {

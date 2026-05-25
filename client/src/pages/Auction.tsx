@@ -109,6 +109,19 @@ export default function Auction() {
   }, [socket, navigate, roomCode]);
 
   useEffect(() => {
+    if (!socket) return;
+    const handleAuctionComplete = () => {
+      if (roomCode) {
+        navigate(`/summary/${roomCode}`);
+      }
+    };
+    socket.on('auction_complete', handleAuctionComplete);
+    return () => {
+      socket.off('auction_complete', handleAuctionComplete);
+    };
+  }, [socket, navigate, roomCode]);
+
+  useEffect(() => {
     if (socket && !roomState) {
       const playerName = localStorage.getItem('playerName');
       if (!playerName) {

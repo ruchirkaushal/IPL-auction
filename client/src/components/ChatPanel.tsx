@@ -30,6 +30,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
     }
   }, [messages.length]);
 
+  const me = roomState?.players.find(p => p.socketId === socket?.id);
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -150,7 +151,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
             }
 
             // User message
-            const isMe = socket?.id === msg.sender;
+            const isMe = Boolean(me && msg.sender && me.name === msg.sender);
             const senderTeam = msg.teamId ? TEAMS[msg.teamId] : null;
             return (
               <div 
