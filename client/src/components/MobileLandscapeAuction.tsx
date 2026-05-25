@@ -35,6 +35,7 @@ interface AuctionLayoutProps {
   actions: {
     placeBid: (code: string) => void;
     togglePause: (code: string) => void;
+    skipCurrentSet: (code: string) => void;
     endAuction: (code: string) => void;
     resetRoom: (code: string) => void;
     leaveRoom: () => void;
@@ -176,6 +177,14 @@ export default function MobileLandscapeAuction({
                       className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
                     >
                       Resume
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Skip the rest of the current set and move to the next set?")) actions.skipCurrentSet(roomCode || '');
+                      }}
+                      className="w-full py-2 px-3 font-bold uppercase text-[10px] rounded-lg bg-yellow-500/15 border border-yellow-500/30 text-yellow-300"
+                    >
+                      Skip Current Set
                     </button>
                     <button
                       onClick={() => {

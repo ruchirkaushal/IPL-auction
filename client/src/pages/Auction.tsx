@@ -19,6 +19,7 @@ export default function Auction() {
     placeBid,
     videoManager,
     togglePause,
+    skipCurrentSet,
     endAuction,
     resetRoom,
     leaveRoom,
@@ -173,6 +174,7 @@ export default function Auction() {
     actions: {
       placeBid,
       togglePause,
+      skipCurrentSet,
       endAuction,
       resetRoom,
       leaveRoom,

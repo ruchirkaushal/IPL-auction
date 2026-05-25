@@ -237,8 +237,22 @@ const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boolean =>
 const resolveCurrentPlayer = (room: Room) => {
   try {
     const state = room.state;
-    const player = getPlayerById(state.auction.auctionQueue[state.auction.currentPlayerIndex]);
-    if (!player) return;
+    const playerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
+    const player = getPlayerById(playerId);
+    if (!player) {
+      console.error(`[Error] resolveCurrentPlayer: Missing player ${playerId} at index ${state.auction.currentPlayerIndex}`);
+      if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
+        io.to(state.roomCode).emit('auction_complete', state);
+        return;
+      }
+      state.auction.phase = 'advancing';
+      state.auction.isAdvancing = false;
+      emitRoomState(state.roomCode);
+      room.autoAdvanceTimeout = setTimeout(() => {
+        advanceToNextPlayer(room);
+      }, 2000);
+      return;
+    }
 
     if (state.auction.highestBidderId) {
       state.auction.phase = 'sold';
@@ -314,9 +328,12 @@ const advanceToNextPlayer = (room: Room) => {
     setTimeout(() => {
       try {
         const nextPlayer = getPlayerById(nextPlayerId);
-        if (nextPlayer) {
-          state.auction.currentBid = normalizeBasePrice(nextPlayer.basePrice);
+        if (!nextPlayer) {
+          console.error(`[Error] advanceToNextPlayer: Missing next player ${nextPlayerId}. Skipping to next index.`);
+          return advanceToNextPlayer(room);
         }
+
+        state.auction.currentBid = normalizeBasePrice(nextPlayer.basePrice);
         state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
         state.auction.phase = 'bidding';
         emitRoomState(state.roomCode);
@@ -329,6 +346,62 @@ const advanceToNextPlayer = (room: Room) => {
   } catch (error) {
     console.error(`[CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
   }
+};
+
+const skipCurrentSet = (room: Room) => {
+  const state = room.state;
+  if (!state.auction.isStarted || state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
+    return;
+  }
+
+  const currentPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
+  const currentSetName = getSetNameForPlayer(currentPlayerId);
+  if (!currentSetName) {
+    return;
+  }
+
+  let nextIndex = state.auction.currentPlayerIndex;
+  while (nextIndex < state.auction.auctionQueue.length) {
+    const nextPlayerId = state.auction.auctionQueue[nextIndex];
+    if (getSetNameForPlayer(nextPlayerId) !== currentSetName) break;
+    nextIndex += 1;
+  }
+
+  if (nextIndex >= state.auction.auctionQueue.length) {
+    state.auction.currentPlayerIndex = state.auction.auctionQueue.length;
+    state.auction.phase = 'waiting';
+    state.auction.currentSetName = '';
+    state.auction.currentBid = 0;
+    state.auction.nextBidAmount = null;
+    state.auction.highestBidderId = null;
+    state.auction.passedTeams = [];
+    state.auction.isAdvancing = false;
+    state.auction.ticks = 0;
+    io.to(state.roomCode).emit('auction_complete', state);
+    emitRoomState(state.roomCode);
+    return;
+  }
+
+  const nextPlayerId = state.auction.auctionQueue[nextIndex];
+  const nextPlayer = getPlayerById(nextPlayerId);
+
+  state.auction.currentPlayerIndex = nextIndex;
+  state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
+  state.auction.currentBid = nextPlayer ? normalizeBasePrice(nextPlayer.basePrice) : 0;
+  state.auction.nextBidAmount = getAuthoritativeNextBid(state);
+  state.auction.highestBidderId = null;
+  state.auction.passedTeams = [];
+  state.auction.isAdvancing = false;
+  state.auction.ticks = 100;
+  state.auction.phase = 'bidding';
+  ALL_TEAM_IDS.forEach(id => {
+    state.teams[id].status = 'idle';
+  });
+  if (room.autoAdvanceTimeout) {
+    clearTimeout(room.autoAdvanceTimeout);
+    room.autoAdvanceTimeout = null;
+  }
+  emitRoomState(state.roomCode);
 };
 
 const startTimer = (room: Room) => {
@@ -501,6 +574,7 @@ io.on('connection', (socket: Socket) => {
     room.state.isLocked = true;
     room.state.auction.isStarted = true;
     room.state.auction.auctionQueue = createAuctionQueue();
+    room.state.auction.ticks = 100;
     
     const firstPlayerId = room.state.auction.auctionQueue[0];
     const firstPlayer = getPlayerById(firstPlayerId);
@@ -637,6 +711,13 @@ io.on('connection', (socket: Socket) => {
     }
 
     emitRoomState(roomCode);
+  });
+
+  socket.on('skip_current_set', ({ roomCode }: { roomCode: string }) => {
+    const room = rooms.get(roomCode);
+    if (!room || room.state.hostId !== socket.id) return;
+    clearAllTimers(room);
+    skipCurrentSet(room);
   });
 
   socket.on('end_auction', ({ roomCode }: { roomCode: string }) => {

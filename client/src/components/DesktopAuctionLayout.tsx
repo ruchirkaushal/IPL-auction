@@ -34,6 +34,7 @@ interface AuctionLayoutProps {
   actions: {
     placeBid: (code: string) => void;
     togglePause: (code: string) => void;
+    skipCurrentSet: (code: string) => void;
     endAuction: (code: string) => void;
     resetRoom: (code: string) => void;
     leaveRoom: () => void;
@@ -180,6 +181,16 @@ export default function DesktopAuctionLayout({
                           className="w-full py-3 px-4 font-bold uppercase text-xs tracking-wider rounded-xl transition-all hover:scale-105 bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400 shadow-[0_0_20px_rgba(0,229,255,0.3)]"
                         >
                           Resume
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm("Are you sure you want to skip the rest of the current set and move to the next set?")) {
+                              actions.skipCurrentSet(roomCode || '');
+                            }
+                          }}
+                          className="w-full py-3 px-4 font-bold uppercase text-xs tracking-wider rounded-xl transition-all hover:scale-105 bg-yellow-500/15 border border-yellow-500/30 hover:bg-yellow-500/25 text-yellow-300"
+                        >
+                          Skip Current Set
                         </button>
                         <button
                           onClick={() => {
