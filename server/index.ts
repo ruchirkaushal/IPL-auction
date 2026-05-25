@@ -819,12 +819,12 @@ io.on('connection', (socket: Socket) => {
   });
 });
 
-const PORT = 3005;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3005;
 
 async function startServer() {
   console.log('Initializing automatic IPL player image resolution system...');
   await resolveAllPlayerImages(PLAYERS);
-  
+
   httpServer.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
   });

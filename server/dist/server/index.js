@@ -704,7 +704,7 @@ io.on('connection', (socket) => {
         handleLeaveRoom(socket.id, true);
     });
 });
-const PORT = 3005;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3005;
 async function startServer() {
     console.log('Initializing automatic IPL player image resolution system...');
     await (0, playerImageResolver_1.resolveAllPlayerImages)(PLAYERS);

@@ -14,7 +14,7 @@ import type {
   PlayerAdvancingPayload
 } from '../types';
 
-const VITE_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3005';
+const VITE_SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3005' : window.location.origin);
 
 export const useSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
