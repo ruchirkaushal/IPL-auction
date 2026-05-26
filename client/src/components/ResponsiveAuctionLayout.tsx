@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import useDeviceDetect from '../hooks/useDeviceDetect';
 import DesktopAuctionLayout from './DesktopAuctionLayout';

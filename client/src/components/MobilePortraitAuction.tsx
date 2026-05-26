@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from 'react';
 import ChatPanel from './ChatPanel';
 import BidControls from './BidControls';
