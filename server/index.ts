@@ -81,6 +81,18 @@ const getSetNameForPlayer = (playerId: string): string => {
 
 
 
+interface RoomLifecycleEvent {
+  time: number;
+  event: string;
+  context?: any;
+}
+
+interface IntervalRecord {
+  purpose: string;
+  createdAt: number;
+  lastExecutedAt: number;
+}
+
 interface Room {
   state: RoomState;
   timerInterval: NodeJS.Timeout | null;
@@ -89,10 +101,30 @@ interface Room {
   aiTimeouts: NodeJS.Timeout[];
   deletionTimeout?: NodeJS.Timeout | null;
   roomGeneration: number; // Invalidates stale references to deleted rooms
+  lifecycleTimeline: RoomLifecycleEvent[];
+  intervalRegistry: Record<string, IntervalRecord>;
 }
 
 const rooms = new Map<string, Room>();
 const reconnectTimeouts = new Map<string, NodeJS.Timeout>();
+
+const recordLifecycle = (room: Room, event: string, context?: any) => {
+  room.lifecycleTimeline.push({ time: Date.now(), event, context });
+  if (room.lifecycleTimeline.length > 50) room.lifecycleTimeline.shift();
+  console.log(`[LIFECYCLE: ${room.state.roomCode}] ${event}`, context ? JSON.stringify(context) : '');
+};
+
+const registerInterval = (room: Room, key: string, purpose: string) => {
+  room.intervalRegistry[key] = { purpose, createdAt: Date.now(), lastExecutedAt: 0 };
+};
+
+const markIntervalExecuted = (room: Room, key: string) => {
+  if (room.intervalRegistry[key]) room.intervalRegistry[key].lastExecutedAt = Date.now();
+};
+
+const unregisterInterval = (room: Room, key: string) => {
+  delete room.intervalRegistry[key];
+};
 
 const getReconnectKey = (roomCode: string, player: { userId?: string; name: string }) => {
   return `${roomCode}_${player.userId ?? player.name}`;
@@ -142,7 +174,9 @@ setInterval(() => {
                 activePlayersCount: room.state.players.filter(p => p.socketId !== '').length,
                 hasTimerInterval: room.timerInterval !== null,
                 hasAutoAdvance: room.autoAdvanceTimeout !== null,
-                hasBiddingStart: room.biddingStartTimeout !== null
+                hasBiddingStart: room.biddingStartTimeout !== null,
+                intervalRegistry: room.intervalRegistry,
+                lifecycleTimeline: room.lifecycleTimeline
               });
               lastObserved.timestamp = Date.now();
             }
@@ -274,6 +308,10 @@ const clearAllTimers = (room: Room) => {
   room.autoAdvanceTimeout = null;
   room.biddingStartTimeout = null;
   room.aiTimeouts = [];
+  unregisterInterval(room, 'timerInterval');
+  unregisterInterval(room, 'autoAdvanceTimeout');
+  unregisterInterval(room, 'biddingStartTimeout');
+  unregisterInterval(room, 'aiTimeouts');
 };
 
 const scheduleAutoAdvance = (room: Room, delayMs: number, reason: string) => {
@@ -283,11 +321,14 @@ const scheduleAutoAdvance = (room: Room, delayMs: number, reason: string) => {
   const roomCode = room.state.roomCode;
   const capturedGeneration = room.roomGeneration;
   
+  registerInterval(room, 'autoAdvanceTimeout', reason);
+
   room.autoAdvanceTimeout = setTimeout(() => {
     room.autoAdvanceTimeout = null;
     try {
       // Validate room still exists at timeout execution time
       const timeoutRoom = rooms.get(roomCode);
+      if (timeoutRoom) markIntervalExecuted(timeoutRoom, 'autoAdvanceTimeout');
       if (!timeoutRoom || timeoutRoom.roomGeneration !== capturedGeneration) {
         console.log(`[AutoAdvance Timeout] Room ${roomCode} is stale. Aborting auto-advance.`);
         return;
@@ -530,11 +571,14 @@ const advanceToNextPlayer = (room: Room, reason: string = 'unknown') => {
     
     emitRoomState(roomCode);
 
+    const startReason = 'bidding_start';
+    registerInterval(currentRoom, 'biddingStartTimeout', startReason);
     currentRoom.biddingStartTimeout = setTimeout(() => {
       currentRoom.biddingStartTimeout = null;
       try {
         // Validate room still exists at timeout execution time
         const timeoutRoom = rooms.get(roomCode);
+        if (timeoutRoom) markIntervalExecuted(timeoutRoom, 'biddingStartTimeout');
         if (!timeoutRoom || timeoutRoom.roomGeneration !== room.roomGeneration) {
           console.log(`[Advance Timeout] Room ${roomCode} is stale. Aborting delayed start.`);
           return;
@@ -584,6 +628,8 @@ const startTimer = (room: Room) => {
   console.log(`[DIAGNOSTICS: TIMER] Starting timer for room ${roomCode}`);
   logAuctionEvent(room, 'timer_started');
   
+  registerInterval(room, 'timerInterval', 'main_auction_timer');
+
   room.timerInterval = setInterval(() => {
     try {
       // CRITICAL: Verify room still exists and hasn't been recreated
@@ -594,13 +640,16 @@ const startTimer = (room: Room) => {
         if (room.timerInterval) {
           clearInterval(room.timerInterval);
           room.timerInterval = null;
+          unregisterInterval(room, 'timerInterval');
         }
         return;
       }
+      markIntervalExecuted(currentRoom, 'timerInterval');
 
       if (currentRoom.state.auction.isPaused || currentRoom.state.auction.phase !== 'bidding') {
         if (currentRoom.timerInterval) clearInterval(currentRoom.timerInterval);
         currentRoom.timerInterval = null;
+        unregisterInterval(currentRoom, 'timerInterval');
         logAuctionEvent(currentRoom, 'timer_stopped_non_bidding_or_paused');
         return;
       }
@@ -608,6 +657,7 @@ const startTimer = (room: Room) => {
       if (currentRoom.state.auction.currentPlayerIndex >= currentRoom.state.auction.auctionQueue.length) {
         if (currentRoom.timerInterval) clearInterval(currentRoom.timerInterval);
         currentRoom.timerInterval = null;
+        unregisterInterval(currentRoom, 'timerInterval');
         const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
         const clientCount = socketsInRoom ? socketsInRoom.size : 0;
         console.log(`[Timer] Queue complete. Emitting auction_complete to ${clientCount} clients in ${roomCode}.`);
@@ -696,15 +746,19 @@ io.on('connection', (socket: Socket) => {
       isLocked: false
     };
 
-    rooms.set(roomCode, {
+    const newRoom: Room = {
       state: roomState,
       timerInterval: null,
       autoAdvanceTimeout: null,
       biddingStartTimeout: null,
       aiTimeouts: [],
-      deletionTimeout: null,
-      roomGeneration: 0
-    });
+      roomGeneration: Date.now(),
+      lifecycleTimeline: [],
+      intervalRegistry: {}
+    };
+    rooms.set(roomCode, newRoom);
+    recordLifecycle(newRoom, 'room_created');
+    console.log(`[DIAGNOSTICS: ROOM] Room ${roomCode} created by ${socket.id}`);
 
     socket.join(roomCode);
     socket.emit('room_created', { roomCode });
@@ -1093,7 +1147,9 @@ io.on('connection', (socket: Socket) => {
                   clearAllTimers(checkRoom);
                   // Increment generation number before deletion to invalidate all stale references
                   checkRoom.roomGeneration++;
+                  console.error(`[DIAGNOSTICS: ROOM DESTRUCTION] Trigger: Empty player cleanup timeout`, { roomCode, phase: checkRoom.state.auction.phase });
                   rooms.delete(roomCode);
+                  recordLifecycle(checkRoom, 'room_deleted_timeout');
                   console.log(`[Room Lifecycle] Room ${roomCode} deleted (generation was ${checkRoom.roomGeneration - 1}).`);
                 }
               }, 3600000);
@@ -1144,7 +1200,9 @@ io.on('connection', (socket: Socket) => {
         clearAllTimers(room);
         // Increment generation number before deletion to invalidate all stale references
         room.roomGeneration++;
+        console.error(`[DIAGNOSTICS: ROOM DESTRUCTION] Trigger: Immediate explicit leave (no players left)`, { roomCode, phase: room.state.auction.phase });
         rooms.delete(roomCode);
+        recordLifecycle(room, 'room_deleted_immediate');
         console.log(`[Room] Room ${roomCode} deleted immediately (0 players left). Generation: ${room.roomGeneration - 1}`);
       } else if (activePlayers.length === 0) {
         // If all remaining players are disconnected, start the deletion timeout rather than instant kill
@@ -1154,7 +1212,9 @@ io.on('connection', (socket: Socket) => {
           if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
             clearAllTimers(checkRoom);
             checkRoom.roomGeneration++;
+            console.error(`[DIAGNOSTICS: ROOM DESTRUCTION] Trigger: Explicit leave timeout`, { roomCode, phase: checkRoom.state.auction.phase });
             rooms.delete(roomCode);
+            recordLifecycle(checkRoom, 'room_deleted_timeout');
           }
         }, 3600000);
       } else if (player.isHost) {
