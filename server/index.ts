@@ -231,6 +231,17 @@ app.get('/api/players', (_req, res) => {
   res.json(PLAYERS);
 });
 
+// Health check endpoint — also used for keep-alive self-ping
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    activeRooms: rooms.size,
+    timestamp: new Date().toISOString()
+  });
+});
+
+
 console.log(`Loaded ${PLAYERS.length} players from the IPL database`);
 console.log(
   `Auction timing config: startTicks=${AUCTION_START_TICKS}, tickMs=${AUCTION_TIMER_TICK_MS}, resolveToNextMs=${AUCTION_DELAY_RESOLVE_TO_NEXT_MS}, advanceToBiddingMs=${AUCTION_DELAY_ADVANCE_TO_BIDDING_MS}, missingRecoveryMs=${AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS}`
@@ -1299,6 +1310,30 @@ async function startServer() {
     console.log(`Server listening on port ${PORT}`);
     console.log(`[Server] Active room supervision enabled with stale reference detection`);
     console.log(`[Server] Global error handlers active for uncaughtException and unhandledRejection`);
+
+    // ============================================================
+    // KEEP-ALIVE SELF-PING
+    // Render's free tier spins down the server after ~15 minutes
+    // of no HTTP traffic. This pings our own /health endpoint
+    // every 10 minutes to prevent spin-down during active games.
+    // ============================================================
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+    if (RENDER_URL) {
+      const keepAliveInterval = 10 * 60 * 1000; // 10 minutes
+      setInterval(async () => {
+        try {
+          const pingUrl = `${RENDER_URL}/health`;
+          const response = await fetch(pingUrl);
+          const data = await response.json() as { activeRooms: number; uptime: number };
+          console.log(`[Keep-Alive] Self-ping OK — uptime=${Math.floor(data.uptime)}s, activeRooms=${data.activeRooms}`);
+        } catch (err) {
+          console.warn(`[Keep-Alive] Self-ping failed:`, err);
+        }
+      }, keepAliveInterval);
+      console.log(`[Keep-Alive] Self-ping enabled → ${RENDER_URL}/health every 10 minutes`);
+    } else {
+      console.log(`[Keep-Alive] RENDER_EXTERNAL_URL not set — self-ping disabled (local dev mode)`);
+    }
   });
 }
 
