@@ -1,4 +1,18 @@
 "use strict";
+/**
+ * index.ts — Slim Orchestrator
+ *
+ * All business logic has been extracted to:
+ *   server/services/Telemetry.ts
+ *   server/services/RoomManager.ts
+ *   server/services/AuctionEngine.ts
+ *
+ * This file is responsible only for:
+ *   1. Creating the Express + Socket.IO server
+ *   2. Wiring up REST routes
+ *   3. Binding socket events to service functions
+ *   4. Starting the HTTP server
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,665 +21,88 @@ const express_1 = __importDefault(require("express"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
-const allPlayers_1 = require("./lib/allPlayers");
 const playerImageResolver_1 = require("../shared/playerImageResolver");
 const auctionSets_1 = require("./lib/auctionSets");
-const auctionConfig_1 = require("../shared/auctionConfig");
 const auctionPricing_1 = require("../shared/auctionPricing");
-// Constants
-const ALL_TEAM_IDS = ['MI', 'CSK', 'RCB', 'KKR', 'DC', 'RR', 'PBKS', 'SRH', 'GT', 'LSG'];
-// Full 232-player database from all 10 IPL teams
-const PLAYERS = allPlayers_1.ALL_PLAYERS;
-const AUCTION_START_TICKS = Number(process.env.AUCTION_START_TICKS ?? 100);
-const AUCTION_TIMER_TICK_MS = Number(process.env.AUCTION_TIMER_TICK_MS ?? 100);
-const AUCTION_DELAY_RESOLVE_TO_NEXT_MS = Number(process.env.AUCTION_DELAY_RESOLVE_TO_NEXT_MS ?? 4000);
-const AUCTION_DELAY_ADVANCE_TO_BIDDING_MS = Number(process.env.AUCTION_DELAY_ADVANCE_TO_BIDDING_MS ?? 1000);
-const AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS = Number(process.env.AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS ?? 200);
-const SOCKET_PING_INTERVAL_MS = Number(process.env.SOCKET_PING_INTERVAL_MS ?? 25000);
-const SOCKET_PING_TIMEOUT_MS = Number(process.env.SOCKET_PING_TIMEOUT_MS ?? 120000);
-const SOCKET_RECOVERY_WINDOW_MS = Number(process.env.SOCKET_RECOVERY_WINDOW_MS ?? 120000);
-const getPlayerById = (id) => PLAYERS.find(p => p.id === id);
-// Helper to shuffle an array
-const shuffleArray = (array) => {
-    const arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-};
-// Helper to derive the set name for a given player ID
-const getSetNameForPlayer = (playerId) => {
-    const sets = (0, auctionSets_1.getAuctionSets)();
-    const match = sets.find(s => s.playerIds.includes(playerId));
-    return match ? match.setName : '';
-};
-const rooms = new Map();
-const reconnectTimeouts = new Map();
-const recordLifecycle = (room, event, context) => {
-    room.lifecycleTimeline.push({ time: Date.now(), event, context });
-    if (room.lifecycleTimeline.length > 50)
-        room.lifecycleTimeline.shift();
-    console.log(`[LIFECYCLE: ${room.state.roomCode}] ${event}`, context ? JSON.stringify(context) : '');
-};
-const registerInterval = (room, key, purpose) => {
-    room.intervalRegistry[key] = { purpose, createdAt: Date.now(), lastExecutedAt: 0 };
-};
-const markIntervalExecuted = (room, key) => {
-    if (room.intervalRegistry[key])
-        room.intervalRegistry[key].lastExecutedAt = Date.now();
-};
-const unregisterInterval = (room, key) => {
-    delete room.intervalRegistry[key];
-};
-const getReconnectKey = (roomCode, player) => {
-    return `${roomCode}_${player.userId ?? player.name}`;
-};
-// Helper to check if a room reference is still valid (hasn't been deleted)
-const isRoomStale = (room, roomCode) => {
-    const currentRoom = rooms.get(roomCode);
-    if (!currentRoom)
-        return true; // Room was deleted
-    if (currentRoom.roomGeneration !== room.roomGeneration)
-        return true; // Room was recreated
-    return false;
-};
-const getCurrentPlayerId = (state) => {
-    return state.auction.auctionQueue[state.auction.currentPlayerIndex] ?? null;
-};
-// --- DIAGNOSTICS & TELEMETRY ---
-let lastTickTime = Date.now();
-setInterval(() => {
-    const currentTime = Date.now();
-    const lag = currentTime - lastTickTime - 2000;
-    if (lag > 100) {
-        console.warn(`[DIAGNOSTICS: PERFORMANCE] Event loop lag detected: ${lag}ms`);
-        if (lag > 500) {
-            console.warn(`[DIAGNOSTICS: MEMORY] Heavy lag snapshot:`, process.memoryUsage());
-        }
-    }
-    lastTickTime = currentTime;
-}, 2000);
-const lastObservedTicks = new Map();
-setInterval(() => {
-    try {
-        rooms.forEach((room, roomCode) => {
-            const state = room.state.auction;
-            if (state.phase === 'bidding' && !state.isPaused && !state.isAdvancing) {
-                const lastObserved = lastObservedTicks.get(roomCode);
-                if (lastObserved) {
-                    if (lastObserved.ticks === state.ticks) {
-                        const timeSinceStuck = Date.now() - lastObserved.timestamp;
-                        if (timeSinceStuck > 10000) { // 10 seconds stuck
-                            console.error(`[DIAGNOSTICS: FREEZE WATCHDOG] CRITICAL: Room ${roomCode} timer is frozen for ${timeSinceStuck}ms!`);
-                            console.error(`[DIAGNOSTICS: FREEZE WATCHDOG] Room State Dump:`, {
-                                auction: state,
-                                playersCount: room.state.players.length,
-                                activePlayersCount: room.state.players.filter(p => p.socketId !== '').length,
-                                hasTimerInterval: room.timerInterval !== null,
-                                hasAutoAdvance: room.autoAdvanceTimeout !== null,
-                                hasBiddingStart: room.biddingStartTimeout !== null,
-                                intervalRegistry: room.intervalRegistry,
-                                lifecycleTimeline: room.lifecycleTimeline
-                            });
-                            lastObserved.timestamp = Date.now();
-                        }
-                    }
-                    else {
-                        lastObservedTicks.set(roomCode, { ticks: state.ticks, timestamp: Date.now() });
-                    }
-                }
-                else {
-                    lastObservedTicks.set(roomCode, { ticks: state.ticks, timestamp: Date.now() });
-                }
-            }
-            else {
-                lastObservedTicks.delete(roomCode);
-            }
-        });
-    }
-    catch (err) {
-        console.error(`[DIAGNOSTICS: ERROR] Watchdog failure:`, err);
-    }
-}, 5000);
-// --- END DIAGNOSTICS ---
-const logAuctionEvent = (room, event, meta = {}) => {
-    const auction = room.state.auction;
-    const currentPlayerId = getCurrentPlayerId(room.state);
-    console.log(`[DIAGNOSTICS: AUCTION] ${room.state.roomCode} :: ${event} :: phase=${auction.phase} idx=${auction.currentPlayerIndex}/${auction.auctionQueue.length} ticks=${auction.ticks} paused=${auction.isPaused} advancing=${auction.isAdvancing} current=${currentPlayerId ?? 'none'} ${JSON.stringify(meta)}`);
-};
+const auctionPricing_2 = require("../shared/auctionPricing");
+const constants_1 = require("./constants");
+const utils_1 = require("./utils");
+// Services
+const RoomManager_1 = require("./services/RoomManager");
+const AuctionEngine_1 = require("./services/AuctionEngine");
+const Telemetry_1 = require("./services/Telemetry");
+const auctionConfig_1 = require("../shared/auctionConfig");
+// ---------------------------------------------------------------------------
+// Server setup
+// ---------------------------------------------------------------------------
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: { origin: '*' },
-    pingInterval: SOCKET_PING_INTERVAL_MS,
-    pingTimeout: SOCKET_PING_TIMEOUT_MS,
+    pingInterval: constants_1.SOCKET_PING_INTERVAL_MS,
+    pingTimeout: constants_1.SOCKET_PING_TIMEOUT_MS,
     connectionStateRecovery: {
-        maxDisconnectionDuration: SOCKET_RECOVERY_WINDOW_MS,
+        maxDisconnectionDuration: constants_1.SOCKET_RECOVERY_WINDOW_MS,
         skipMiddlewares: true,
     },
 });
 io.engine.on('connection_error', (err) => {
-    console.error('[Socket.IO connection_error]', {
-        code: err.code,
-        message: err.message,
-        context: err.context,
-    });
+    console.error('[Socket.IO connection_error]', { code: err.code, message: err.message, context: err.context });
 });
-// REST API endpoint to get all players
+// Bind io to services
+const emit = (roomCode) => (0, RoomManager_1.emitRoomState)(roomCode, AuctionEngine_1.getAuthoritativeNextBid);
+(0, RoomManager_1.initRoomManager)(io);
+(0, AuctionEngine_1.initAuctionEngine)(io, emit);
+(0, RoomManager_1.startFreezeWatchdog)();
+// ---------------------------------------------------------------------------
+// REST Routes
+// ---------------------------------------------------------------------------
 app.get('/api/players', (_req, res) => {
-    res.json(PLAYERS);
+    res.json(constants_1.PLAYERS);
 });
-// Health check endpoint — also used for keep-alive self-ping
 app.get('/health', (_req, res) => {
     res.json({
         status: 'ok',
         uptime: process.uptime(),
-        activeRooms: rooms.size,
+        activeRooms: RoomManager_1.rooms.size,
         timestamp: new Date().toISOString()
     });
 });
-console.log(`Loaded ${PLAYERS.length} players from the IPL database`);
-console.log(`Auction timing config: startTicks=${AUCTION_START_TICKS}, tickMs=${AUCTION_TIMER_TICK_MS}, resolveToNextMs=${AUCTION_DELAY_RESOLVE_TO_NEXT_MS}, advanceToBiddingMs=${AUCTION_DELAY_ADVANCE_TO_BIDDING_MS}, missingRecoveryMs=${AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS}`);
-console.log(`Socket config: pingIntervalMs=${SOCKET_PING_INTERVAL_MS}, pingTimeoutMs=${SOCKET_PING_TIMEOUT_MS}, recoveryWindowMs=${SOCKET_RECOVERY_WINDOW_MS}`);
-const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-const getCurrentAuctionPlayer = (state) => {
-    const playerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
-    return playerId ? getPlayerById(playerId) : undefined;
-};
-const getAuthoritativeNextBid = (state) => {
-    if (state.auction.phase !== 'bidding')
-        return null;
-    const currentPlayer = getCurrentAuctionPlayer(state);
-    if (!currentPlayer)
-        return null;
-    // If no team has placed a bid yet on the current player, the first bid is the base price!
-    if (!state.auction.highestBidderId) {
-        return (0, auctionPricing_1.normalizeBasePrice)(currentPlayer.basePrice);
-    }
-    return (0, auctionPricing_1.getNextBid)(state.auction.currentBid, currentPlayer.basePrice);
-};
-const syncAuctionDerivedState = (state) => {
-    state.auction.nextBidAmount = getAuthoritativeNextBid(state);
-};
-const emitRoomState = (roomCode) => {
-    try {
-        const room = rooms.get(roomCode);
-        if (!room) {
-            console.warn(`[Socket Emission] Room ${roomCode} not found - emission skipped`);
-            return;
-        }
-        syncAuctionDerivedState(room.state);
-        const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-        const clientCount = socketsInRoom ? socketsInRoom.size : 0;
-        io.to(roomCode).emit('room_state_update', room.state);
-        logAuctionEvent(room, 'room_state_emitted', { clientCount });
-    }
-    catch (error) {
-        console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error emitting room state for ${roomCode}:`, error);
-    }
-};
-const emitRoomUnavailable = (socket, roomCode, source) => {
-    console.warn(`[Room Missing] source=${source} room=${roomCode} socket=${socket.id}`);
-    socket.emit('room_unavailable', {
-        roomCode,
-        source,
-        message: 'Room not found on server. It may have restarted or expired.',
-    });
-};
-const getRoomOrNotify = (socket, roomCode, source) => {
-    const room = rooms.get(roomCode);
-    if (!room) {
-        emitRoomUnavailable(socket, roomCode, source);
-        return null;
-    }
-    return room;
-};
-const clearAllTimers = (room) => {
-    if (room.timerInterval)
-        clearInterval(room.timerInterval);
-    if (room.autoAdvanceTimeout)
-        clearTimeout(room.autoAdvanceTimeout);
-    if (room.biddingStartTimeout)
-        clearTimeout(room.biddingStartTimeout);
-    room.aiTimeouts.forEach(clearTimeout);
-    room.timerInterval = null;
-    room.autoAdvanceTimeout = null;
-    room.biddingStartTimeout = null;
-    room.aiTimeouts = [];
-    unregisterInterval(room, 'timerInterval');
-    unregisterInterval(room, 'autoAdvanceTimeout');
-    unregisterInterval(room, 'biddingStartTimeout');
-    unregisterInterval(room, 'aiTimeouts');
-};
-const scheduleAutoAdvance = (room, delayMs, reason) => {
-    if (room.autoAdvanceTimeout) {
-        clearTimeout(room.autoAdvanceTimeout);
-    }
-    const roomCode = room.state.roomCode;
-    const capturedGeneration = room.roomGeneration;
-    registerInterval(room, 'autoAdvanceTimeout', reason);
-    room.autoAdvanceTimeout = setTimeout(() => {
-        room.autoAdvanceTimeout = null;
-        try {
-            // Validate room still exists at timeout execution time
-            const timeoutRoom = rooms.get(roomCode);
-            if (timeoutRoom)
-                markIntervalExecuted(timeoutRoom, 'autoAdvanceTimeout');
-            if (!timeoutRoom || timeoutRoom.roomGeneration !== capturedGeneration) {
-                console.log(`[AutoAdvance Timeout] Room ${roomCode} is stale. Aborting auto-advance.`);
-                return;
-            }
-            advanceToNextPlayer(timeoutRoom, reason);
-        }
-        catch (error) {
-            console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in scheduleAutoAdvance timeout for ${roomCode}:`, error);
-        }
-    }, delayMs);
-    logAuctionEvent(room, 'auto_advance_scheduled', { delayMs, reason });
-};
-const AI_PREFS = {
-    MI: { targetIds: ['mi-23', 'mi-11', 'mi-4', 'mi-1', 'mi-12', 'mi-17'], roles: ['BAT', 'BOWL'] },
-    CSK: { targetIds: ['csk-1', 'csk-18', 'csk-19', 'csk-11', 'csk-13'], roles: ['AR', 'WK'] },
-    RCB: { targetIds: ['rcb-2', 'rcb-3', 'rcb-8', 'rcb-15', 'rcb-1'], roles: ['BAT', 'BOWL'] },
-    KKR: { targetIds: ['kkr-13', 'kkr-12', 'kkr-20', 'kkr-15', 'kkr-4'], roles: ['AR', 'BOWL'] },
-    DC: { targetIds: ['dc-1', 'dc-8', 'dc-22', 'dc-17', 'dc-3'], roles: ['WK', 'BOWL'] },
-    RR: { targetIds: ['rr-1', 'rr-7', 'rr-12', 'rr-9', 'rr-11'], roles: ['WK', 'BAT'] },
-    PBKS: { targetIds: ['pbks-4', 'pbks-22', 'pbks-24', 'pbks-16', 'pbks-11'], roles: ['BAT', 'BOWL'] },
-    SRH: { targetIds: ['srh-8', 'srh-7', 'srh-17', 'srh-15', 'srh-13'], roles: ['BAT', 'AR'] },
-    GT: { targetIds: ['gt-1', 'gt-7', 'gt-26', 'gt-18', 'gt-6'], roles: ['BAT', 'BOWL'] },
-    LSG: { targetIds: ['lsg-4', 'lsg-7', 'lsg-24', 'lsg-5', 'lsg-8'], roles: ['WK', 'AR'] }
-};
-const scheduleAiBids = (room) => {
-    room.aiTimeouts.forEach(clearTimeout);
-    room.aiTimeouts = [];
-    // AI bidding is completely disabled per client's strict HUMAN-ONLY BIDDING SYSTEM requirement.
-};
-const addChatMessage = (room, msg) => {
-    const newMsg = {
-        ...msg,
-        id: Math.random().toString(36).substring(2, 9),
-        timestamp: Date.now()
-    };
-    room.state.chat.push(newMsg);
-    if (room.state.chat.length > 100) {
-        room.state.chat.shift();
-    }
-};
-const placeBid = (room, teamId, isAI = false) => {
-    try {
-        const state = room.state;
-        if (state.auction.isPaused)
-            return false;
-        if (state.auction.phase !== 'bidding')
-            return false;
-        if (state.auction.isAdvancing)
-            return false;
-        const player = getCurrentAuctionPlayer(state);
-        if (!player)
-            return false;
-        const normalizedAmount = getAuthoritativeNextBid(state);
-        if (normalizedAmount === null) {
-            return false;
-        }
-        // AI bidding is completely disabled. Reject all AI bids.
-        if (isAI) {
-            return false;
-        }
-        const team = state.teams[teamId];
-        // Verify team is owned by an active human player in the room
-        const owningPlayer = state.players.find(p => p.teamId === teamId);
-        if (!owningPlayer || team.ownerId !== owningPlayer.socketId) {
-            return false;
-        }
-        if (team.purseRemaining < normalizedAmount)
-            return false;
-        if (team.squad.length >= auctionConfig_1.MAX_SQUAD_SIZE)
-            return false;
-        if (player.isOverseas && team.overseasCount >= auctionConfig_1.MAX_OVERSEAS_PLAYERS)
-            return false;
-        state.auction.currentBid = normalizedAmount;
-        state.auction.highestBidderId = teamId;
-        ALL_TEAM_IDS.forEach(id => {
-            if (state.teams[id].status === 'leading') {
-                state.teams[id].status = 'idle';
-            }
-        });
-        team.status = 'leading';
-        state.auction.ticks = Number(process.env.AUCTION_START_TICKS ?? 100);
-        syncAuctionDerivedState(state);
-        io.to(state.roomCode).emit('bid_placed', { teamId, teamName: teamId, amount: normalizedAmount, isAI });
-        addChatMessage(room, {
-            type: 'system_bid',
-            teamId,
-            playerName: player.name,
-            amount: normalizedAmount
-        });
-        emitRoomState(state.roomCode);
-        scheduleAiBids(room);
-        return true;
-    }
-    catch (error) {
-        console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in placeBid for room ${room.state.roomCode}:`, error);
-        return false;
-    }
-};
-const resolveCurrentPlayer = (room) => {
-    try {
-        const state = room.state;
-        const roomCode = state.roomCode;
-        // Validate room still exists
-        const currentRoom = rooms.get(roomCode);
-        if (!currentRoom || currentRoom.roomGeneration !== room.roomGeneration) {
-            console.log(`[Resolve] Room ${roomCode} is stale. Aborting resolveCurrentPlayer.`);
-            return;
-        }
-        const playerId = getCurrentPlayerId(state);
-        if (!playerId) {
-            logAuctionEvent(currentRoom, 'resolve_missing_player_id');
-            state.auction.isAdvancing = false;
-            scheduleAutoAdvance(currentRoom, AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS, 'missing_player_id');
-            return;
-        }
-        const player = getPlayerById(playerId);
-        if (!player) {
-            logAuctionEvent(currentRoom, 'resolve_missing_player_record', { playerId });
-            state.auction.isAdvancing = false;
-            scheduleAutoAdvance(currentRoom, AUCTION_DELAY_MISSING_PLAYER_RECOVERY_MS, 'missing_player_record');
-            return;
-        }
-        if (state.auction.highestBidderId) {
-            state.auction.phase = 'sold';
-            const team = state.teams[state.auction.highestBidderId];
-            if (!team) {
-                console.error(`[Error] resolveCurrentPlayer: Team ${state.auction.highestBidderId} not found`);
-                return;
-            }
-            const amountPaid = (0, auctionPricing_1.toSafeLakhs)(state.auction.currentBid);
-            team.purseRemaining = (0, auctionPricing_1.toSafeLakhs)(team.purseRemaining - amountPaid);
-            team.squad.push({ id: player.id, price: amountPaid });
-            if (player.isOverseas)
-                team.overseasCount += 1;
-            logAuctionEvent(currentRoom, 'player_sold', { teamId: team.teamId, playerName: player.name, amount: amountPaid });
-            const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-            console.log(`[Sale] ${player.name} sold to ${team.teamId} for ${amountPaid}L to ${socketsInRoom?.size || 0} clients`);
-            io.to(roomCode).emit('player_sold', {
-                teamId: team.teamId,
-                teamName: team.teamId,
-                amount: amountPaid,
-                playerName: player.name,
-                playerId: player.id
-            });
-            addChatMessage(currentRoom, {
-                type: 'system_sold',
-                teamId: team.teamId,
-                playerName: player.name,
-                amount: amountPaid
-            });
-        }
-        else {
-            state.auction.phase = 'unsold';
-            logAuctionEvent(currentRoom, 'player_unsold', { playerName: player.name });
-            const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-            console.log(`[Unsold] ${player.name} went unsold to ${socketsInRoom?.size || 0} clients`);
-            io.to(roomCode).emit('player_unsold', {
-                playerName: player.name,
-                playerId: player.id
-            });
-            addChatMessage(currentRoom, {
-                type: 'system_unsold',
-                playerName: player.name
-            });
-        }
-        ALL_TEAM_IDS.forEach(id => { state.teams[id].status = 'idle'; });
-        emitRoomState(roomCode);
-        scheduleAutoAdvance(currentRoom, AUCTION_DELAY_RESOLVE_TO_NEXT_MS, 'resolve_complete');
-    }
-    catch (error) {
-        console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in resolveCurrentPlayer for room ${room.state.roomCode}:`, error);
-    }
-};
-const advanceToNextPlayer = (room, reason = 'unknown') => {
-    try {
-        const state = room.state;
-        const roomCode = state.roomCode;
-        // Validate room still exists
-        const currentRoom = rooms.get(roomCode);
-        if (!currentRoom || currentRoom.roomGeneration !== room.roomGeneration) {
-            console.log(`[Advance] Room ${roomCode} is stale. Aborting advanceToNextPlayer.`);
-            return;
-        }
-        if (currentRoom.biddingStartTimeout) {
-            clearTimeout(currentRoom.biddingStartTimeout);
-            currentRoom.biddingStartTimeout = null;
-        }
-        state.auction.phase = 'advancing';
-        state.auction.currentPlayerIndex += 1;
-        state.auction.currentBid = 0;
-        state.auction.nextBidAmount = null;
-        state.auction.highestBidderId = null;
-        state.auction.passedTeams = [];
-        state.auction.isAdvancing = false;
-        while (state.auction.currentPlayerIndex < state.auction.auctionQueue.length) {
-            const candidateId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
-            if (candidateId && getPlayerById(candidateId)) {
-                break;
-            }
-            logAuctionEvent(currentRoom, 'advance_skipping_invalid_player', { candidateId, reason });
-            state.auction.currentPlayerIndex += 1;
-        }
-        if (state.auction.currentPlayerIndex >= state.auction.auctionQueue.length) {
-            logAuctionEvent(currentRoom, 'auction_complete', { reason });
-            const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-            console.log(`[Advance] Auction complete. Emitting to ${socketsInRoom?.size || 0} clients in ${roomCode}.`);
-            io.to(roomCode).emit('auction_complete', state);
-            return;
-        }
-        const nextPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex];
-        logAuctionEvent(currentRoom, 'player_advancing', { nextPlayerId, reason });
-        console.log(`[Advance] Next player: ${nextPlayerId} (reason: ${reason})`);
-        const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-        io.to(roomCode).emit('player_advancing', { nextPlayerId, nextPlayerIndex: state.auction.currentPlayerIndex });
-        emitRoomState(roomCode);
-        const startReason = 'bidding_start';
-        registerInterval(currentRoom, 'biddingStartTimeout', startReason);
-        currentRoom.biddingStartTimeout = setTimeout(() => {
-            currentRoom.biddingStartTimeout = null;
-            try {
-                // Validate room still exists at timeout execution time
-                const timeoutRoom = rooms.get(roomCode);
-                if (timeoutRoom)
-                    markIntervalExecuted(timeoutRoom, 'biddingStartTimeout');
-                if (!timeoutRoom || timeoutRoom.roomGeneration !== room.roomGeneration) {
-                    console.log(`[Advance Timeout] Room ${roomCode} is stale. Aborting delayed start.`);
-                    return;
-                }
-                if (timeoutRoom.state.auction.isPaused) {
-                    logAuctionEvent(timeoutRoom, 'bidding_start_deferred_due_pause', { nextPlayerId });
-                    return;
-                }
-                const nextPlayer = getPlayerById(nextPlayerId);
-                if (!nextPlayer) {
-                    logAuctionEvent(timeoutRoom, 'advance_missing_next_player', { nextPlayerId });
-                    advanceToNextPlayer(timeoutRoom, 'missing_next_player_post_delay');
-                    return;
-                }
-                timeoutRoom.state.auction.currentBid = (0, auctionPricing_1.normalizeBasePrice)(nextPlayer.basePrice);
-                timeoutRoom.state.auction.currentSetName = getSetNameForPlayer(nextPlayerId);
-                timeoutRoom.state.auction.phase = 'bidding';
-                if (timeoutRoom.state.auction.ticks <= 0 || Number.isNaN(timeoutRoom.state.auction.ticks)) {
-                    timeoutRoom.state.auction.ticks = AUCTION_START_TICKS;
-                }
-                emitRoomState(roomCode);
-                startTimer(timeoutRoom);
-                scheduleAiBids(timeoutRoom);
-            }
-            catch (innerError) {
-                console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in advanceToNextPlayer delayed start for ${roomCode}:`, innerError);
-            }
-        }, AUCTION_DELAY_ADVANCE_TO_BIDDING_MS);
-    }
-    catch (error) {
-        console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Error in advanceToNextPlayer for room ${room.state.roomCode}:`, error);
-    }
-};
-const startTimer = (room) => {
-    if (room.state.auction.isPaused)
-        return;
-    if (room.timerInterval)
-        return;
-    if (room.state.auction.isAdvancing)
-        return;
-    if (room.state.auction.phase !== 'bidding')
-        return;
-    if (room.state.auction.currentPlayerIndex >= room.state.auction.auctionQueue.length)
-        return;
-    if (!Number.isFinite(room.state.auction.ticks) || room.state.auction.ticks <= 0) {
-        room.state.auction.ticks = AUCTION_START_TICKS;
-    }
-    const roomCode = room.state.roomCode;
-    const capturedGeneration = room.roomGeneration;
-    console.log(`[DIAGNOSTICS: TIMER] Starting timer for room ${roomCode}`);
-    logAuctionEvent(room, 'timer_started');
-    registerInterval(room, 'timerInterval', 'main_auction_timer');
-    room.timerInterval = setInterval(() => {
-        try {
-            // CRITICAL: Verify room still exists and hasn't been recreated
-            const currentRoom = rooms.get(roomCode);
-            if (!currentRoom || currentRoom.roomGeneration !== capturedGeneration) {
-                console.log(`[Timer] Room ${roomCode} is stale (deleted or recreated). Killing interval.`);
-                // Clear the original room's interval reference if we somehow have it
-                if (room.timerInterval) {
-                    clearInterval(room.timerInterval);
-                    room.timerInterval = null;
-                    unregisterInterval(room, 'timerInterval');
-                }
-                return;
-            }
-            markIntervalExecuted(currentRoom, 'timerInterval');
-            if (currentRoom.state.auction.isPaused || currentRoom.state.auction.phase !== 'bidding') {
-                if (currentRoom.timerInterval)
-                    clearInterval(currentRoom.timerInterval);
-                currentRoom.timerInterval = null;
-                unregisterInterval(currentRoom, 'timerInterval');
-                logAuctionEvent(currentRoom, 'timer_stopped_non_bidding_or_paused');
-                return;
-            }
-            if (currentRoom.state.auction.currentPlayerIndex >= currentRoom.state.auction.auctionQueue.length) {
-                if (currentRoom.timerInterval)
-                    clearInterval(currentRoom.timerInterval);
-                currentRoom.timerInterval = null;
-                unregisterInterval(currentRoom, 'timerInterval');
-                const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-                const clientCount = socketsInRoom ? socketsInRoom.size : 0;
-                console.log(`[Timer] Queue complete. Emitting auction_complete to ${clientCount} clients in ${roomCode}.`);
-                io.to(roomCode).emit('auction_complete', currentRoom.state);
-                logAuctionEvent(currentRoom, 'timer_stopped_queue_complete');
-                return;
-            }
-            currentRoom.state.auction.ticks -= 1;
-            if (!Number.isFinite(currentRoom.state.auction.ticks)) {
-                currentRoom.state.auction.ticks = AUCTION_START_TICKS;
-            }
-            // Emit timer update to all players in room
-            const socketsInRoom = io.sockets.adapter.rooms.get(roomCode);
-            if (socketsInRoom && socketsInRoom.size > 0) {
-                io.to(roomCode).emit('timer_update', { ticks: currentRoom.state.auction.ticks, timer: currentRoom.state.auction.ticks / 10 });
-            }
-            if (currentRoom.state.auction.ticks > 0 && currentRoom.state.auction.ticks % 10 === 0) {
-                logAuctionEvent(currentRoom, 'timer_tick_second', { ticks: currentRoom.state.auction.ticks });
-            }
-            if (currentRoom.state.auction.ticks <= 0) {
-                if (currentRoom.timerInterval)
-                    clearInterval(currentRoom.timerInterval);
-                currentRoom.timerInterval = null;
-                if (currentRoom.state.auction.isAdvancing) {
-                    logAuctionEvent(currentRoom, 'timer_expired_but_already_advancing');
-                    return;
-                }
-                currentRoom.state.auction.isAdvancing = true;
-                logAuctionEvent(currentRoom, 'timer_expired_resolving_player');
-                resolveCurrentPlayer(currentRoom);
-            }
-        }
-        catch (tickError) {
-            console.error(`[DIAGNOSTICS: ERROR] [CRITICAL] Timer loop failure for room ${roomCode}:`, tickError);
-            // Ensure interval is killed even if error occurred
-            const errorRoom = rooms.get(roomCode);
-            if (errorRoom && errorRoom.timerInterval) {
-                clearInterval(errorRoom.timerInterval);
-                errorRoom.timerInterval = null;
-            }
-        }
-    }, AUCTION_TIMER_TICK_MS);
-};
+// ---------------------------------------------------------------------------
+// Startup logging
+// ---------------------------------------------------------------------------
+console.log(`Loaded ${constants_1.PLAYERS.length} players from the IPL database`);
+// ---------------------------------------------------------------------------
+// Socket event handlers
+// ---------------------------------------------------------------------------
+const handleLeaveRoom = (0, RoomManager_1.makeHandleLeaveRoom)(io, emit);
 io.on('connection', (socket) => {
+    // -- create_room --
     socket.on('create_room', ({ playerName, userId }) => {
         try {
-            const roomCode = generateRoomCode();
-            const initialTeams = {};
-            ALL_TEAM_IDS.forEach(id => {
-                initialTeams[id] = {
-                    teamId: id,
-                    ownerId: null,
-                    ownerName: null,
-                    purseRemaining: auctionConfig_1.INITIAL_PURSE_LAKHS,
-                    squad: [],
-                    overseasCount: 0,
-                    status: 'idle'
-                };
-            });
-            const roomState = {
-                roomCode,
-                hostId: socket.id,
-                players: [{ socketId: socket.id, userId, name: playerName, teamId: null, isHost: true, isReady: false }],
-                teams: initialTeams,
-                auction: {
-                    isStarted: false,
-                    currentPlayerIndex: 0,
-                    auctionQueue: [],
-                    currentBid: 0,
-                    nextBidAmount: null,
-                    highestBidderId: null,
-                    ticks: AUCTION_START_TICKS,
-                    phase: 'waiting',
-                    passedTeams: [],
-                    isAdvancing: false,
-                    currentSetName: '',
-                    isPaused: false
-                },
-                chat: [],
-                isLocked: false
-            };
-            const newRoom = {
-                state: roomState,
-                timerInterval: null,
-                autoAdvanceTimeout: null,
-                biddingStartTimeout: null,
-                aiTimeouts: [],
-                roomGeneration: Date.now(),
-                lifecycleTimeline: [],
-                intervalRegistry: {}
-            };
-            rooms.set(roomCode, newRoom);
-            recordLifecycle(newRoom, 'room_created');
+            const roomCode = (0, RoomManager_1.generateRoomCode)();
+            const roomState = (0, RoomManager_1.makeInitialRoomState)(roomCode, socket.id, userId, playerName);
+            const newRoom = (0, RoomManager_1.makeRoom)(roomState);
+            RoomManager_1.rooms.set(roomCode, newRoom);
+            (0, Telemetry_1.recordLifecycle)(newRoom, 'room_created');
             console.log(`[DIAGNOSTICS: ROOM] Room ${roomCode} created by ${socket.id}`);
             socket.join(roomCode);
             socket.emit('room_created', { roomCode });
             console.log(`[DIAGNOSTICS: ROOM] Created room ${roomCode} for ${playerName} (${userId})`);
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(create_room) failed:`, err);
         }
     });
+    // -- join_room --
     socket.on('join_room', ({ roomCode, playerName, userId }) => {
         try {
-            const room = rooms.get(roomCode);
+            const room = RoomManager_1.rooms.get(roomCode);
             if (!room) {
-                emitRoomUnavailable(socket, roomCode, 'join_room');
+                (0, RoomManager_1.emitRoomUnavailable)(socket, roomCode, 'join_room');
                 socket.emit('error', { message: 'Room not found' });
                 console.log(`[Room] Join failed: room ${roomCode} not found for ${playerName}`);
                 return;
@@ -674,17 +111,16 @@ io.on('connection', (socket) => {
                 clearTimeout(room.deletionTimeout);
                 room.deletionTimeout = null;
             }
-            // Clear reconnect timeout if any, using stable user IDs and legacy name fallback.
+            // Clear reconnect timeouts (by userId and by name for legacy)
             const reconnectKey = `${roomCode}_${userId}`;
             const legacyKey = `${roomCode}_${playerName}`;
-            [reconnectKey, legacyKey].forEach((key) => {
-                const pendingTimeout = reconnectTimeouts.get(key);
+            [reconnectKey, legacyKey].forEach(key => {
+                const pendingTimeout = RoomManager_1.reconnectTimeouts.get(key);
                 if (pendingTimeout) {
                     clearTimeout(pendingTimeout);
-                    reconnectTimeouts.delete(key);
+                    RoomManager_1.reconnectTimeouts.delete(key);
                 }
             });
-            // Use userId for strong identity. Fallback to name for legacy clients if needed.
             const existingPlayerIndex = room.state.players.findIndex(p => p.userId === userId || (p.userId === undefined && p.name === playerName));
             const isRejoining = existingPlayerIndex !== -1;
             if (!isRejoining && room.state.isLocked) {
@@ -712,21 +148,21 @@ io.on('connection', (socket) => {
             else {
                 console.log(`[Room] New player ${playerName} joined room ${roomCode}`);
                 room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
-                if (room.state.players.length === 1) {
+                if (room.state.players.length === 1)
                     room.state.hostId = socket.id;
-                }
             }
             socket.join(roomCode);
             socket.emit('room_joined', { roomCode });
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(join_room) failed:`, err);
         }
     });
+    // -- select_team --
     socket.on('select_team', ({ roomCode, teamId }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'select_team');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'select_team');
             if (!room)
                 return;
             const player = room.state.players.find(p => p.socketId === socket.id);
@@ -736,7 +172,6 @@ io.on('connection', (socket) => {
                 socket.emit('error', { message: 'Team already taken' });
                 return;
             }
-            // Release old team if any
             if (player.teamId) {
                 room.state.teams[player.teamId].ownerId = null;
                 room.state.teams[player.teamId].ownerName = null;
@@ -745,31 +180,28 @@ io.on('connection', (socket) => {
             player.isReady = true;
             room.state.teams[teamId].ownerId = socket.id;
             room.state.teams[teamId].ownerName = player.name;
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(select_team) failed:`, err);
         }
     });
+    // -- start_auction --
     socket.on('start_auction', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'start_auction');
-            if (!room) {
-                console.error(`[Auction] Start failed: room ${roomCode} not found`);
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'start_auction');
+            if (!room)
                 return;
-            }
             if (room.state.hostId !== socket.id) {
-                console.warn(`[Auction] Start rejected: ${socket.id} is not host (host is ${room.state.hostId}) in room ${roomCode}`);
+                console.warn(`[Auction] Start rejected: ${socket.id} is not host in room ${roomCode}`);
                 socket.emit('error', { message: 'Only host can start auction' });
                 return;
             }
-            // Check that every player both selected a team and is ready.
             if (!room.state.players.every(p => p.isReady && p.teamId !== null)) {
-                console.warn(`[Auction] Start rejected: not all players ready in room ${roomCode}`);
                 socket.emit('error', { message: 'All managers must select a team before starting the auction.' });
                 return;
             }
-            clearAllTimers(room);
+            (0, RoomManager_1.clearAllTimers)(room);
             room.state.isLocked = true;
             const auctionQueue = (0, auctionSets_1.createAuctionQueue)();
             room.state.auction = {
@@ -779,7 +211,7 @@ io.on('connection', (socket) => {
                 currentBid: 0,
                 nextBidAmount: null,
                 highestBidderId: null,
-                ticks: AUCTION_START_TICKS,
+                ticks: constants_1.AUCTION_START_TICKS,
                 phase: 'waiting',
                 passedTeams: [],
                 isAdvancing: false,
@@ -787,36 +219,34 @@ io.on('connection', (socket) => {
                 isPaused: false
             };
             const firstPlayerId = room.state.auction.auctionQueue[0];
-            const firstPlayer = getPlayerById(firstPlayerId);
-            if (firstPlayer) {
+            const firstPlayer = (0, utils_1.getPlayerById)(firstPlayerId);
+            if (firstPlayer)
                 room.state.auction.currentBid = (0, auctionPricing_1.normalizeBasePrice)(firstPlayer.basePrice);
-            }
-            room.state.auction.currentSetName = getSetNameForPlayer(firstPlayerId);
+            room.state.auction.currentSetName = (0, utils_1.getSetNameForPlayer)(firstPlayerId);
             room.state.auction.phase = 'bidding';
-            logAuctionEvent(room, 'auction_started');
-            console.log(`[Auction] Started in room ${roomCode}. Queue length: ${auctionQueue.length}, First player: ${firstPlayerId}`);
-            emitRoomState(roomCode);
-            startTimer(room);
-            scheduleAiBids(room);
+            (0, Telemetry_1.logAuctionEvent)(room, 'auction_started');
+            console.log(`[Auction] Started in room ${roomCode}. Queue: ${auctionQueue.length}, First: ${firstPlayerId}`);
+            emit(roomCode);
+            (0, AuctionEngine_1.startTimer)(room);
+            (0, AuctionEngine_1.scheduleAiBids)(room);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(start_auction) failed:`, err);
         }
     });
+    // -- place_bid --
     socket.on('place_bid', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'place_bid');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'place_bid');
             if (!room)
                 return;
             const player = room.state.players.find(p => p.socketId === socket.id);
             if (!player || !player.teamId)
                 return;
-            if (!placeBid(room, player.teamId)) {
-                const expectedBid = getAuthoritativeNextBid(room.state);
+            if (!(0, AuctionEngine_1.placeBid)(room, player.teamId)) {
+                const expectedBid = (0, AuctionEngine_1.getAuthoritativeNextBid)(room.state);
                 socket.emit('bid_rejected', {
-                    reason: expectedBid === null
-                        ? 'Invalid bid'
-                        : `Invalid bid. Next valid amount is ${(0, auctionPricing_1.formatAuctionMoney)(expectedBid)}.`,
+                    reason: expectedBid === null ? 'Invalid bid' : `Invalid bid. Next valid amount is ${(0, auctionPricing_2.formatAuctionMoney)(expectedBid)}.`,
                 });
             }
         }
@@ -824,9 +254,10 @@ io.on('connection', (socket) => {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(place_bid) failed:`, err);
         }
     });
+    // -- pass_bid --
     socket.on('pass_bid', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'pass_bid');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'pass_bid');
             if (!room || room.state.auction.phase !== 'bidding')
                 return;
             const player = room.state.players.find(p => p.socketId === socket.id);
@@ -835,37 +266,27 @@ io.on('connection', (socket) => {
             if (!room.state.auction.passedTeams.includes(player.teamId)) {
                 room.state.auction.passedTeams.push(player.teamId);
                 room.state.teams[player.teamId].status = 'passed';
-                emitRoomState(roomCode);
+                emit(roomCode);
             }
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(pass_bid) failed:`, err);
         }
     });
+    // -- reset_room --
     socket.on('reset_room', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'reset_room');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'reset_room');
             if (!room || room.state.hostId !== socket.id)
                 return;
-            clearAllTimers(room);
-            // Reset auction state
+            (0, RoomManager_1.clearAllTimers)(room);
             room.state.auction = {
-                isStarted: false,
-                currentPlayerIndex: 0,
-                auctionQueue: [],
-                currentBid: 0,
-                nextBidAmount: null,
-                highestBidderId: null,
-                ticks: AUCTION_START_TICKS,
-                phase: 'waiting',
-                passedTeams: [],
-                isAdvancing: false,
-                currentSetName: '',
-                isPaused: false
+                isStarted: false, currentPlayerIndex: 0, auctionQueue: [], currentBid: 0,
+                nextBidAmount: null, highestBidderId: null, ticks: constants_1.AUCTION_START_TICKS,
+                phase: 'waiting', passedTeams: [], isAdvancing: false, currentSetName: '', isPaused: false
             };
             room.state.isLocked = false;
-            // Reset team states
-            ALL_TEAM_IDS.forEach(teamId => {
+            constants_1.ALL_TEAM_IDS.forEach(teamId => {
                 room.state.teams[teamId].ownerId = null;
                 room.state.teams[teamId].ownerName = null;
                 room.state.teams[teamId].purseRemaining = auctionConfig_1.INITIAL_PURSE_LAKHS;
@@ -873,257 +294,94 @@ io.on('connection', (socket) => {
                 room.state.teams[teamId].overseasCount = 0;
                 room.state.teams[teamId].status = 'idle';
             });
-            // Reset player states
-            room.state.players = room.state.players.map(p => ({
-                ...p,
-                teamId: null,
-                isReady: false
-            }));
+            room.state.players = room.state.players.map(p => ({ ...p, teamId: null, isReady: false }));
             room.state.chat = [];
-            // Inform all clients to go to lobby
             io.to(roomCode).emit('room_reset');
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(reset_room) failed:`, err);
         }
     });
+    // -- send_chat --
     socket.on('send_chat', ({ roomCode, text }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'send_chat');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'send_chat');
             if (!room)
                 return;
             const player = room.state.players.find(p => p.socketId === socket.id);
             if (!player)
                 return;
-            addChatMessage(room, {
-                type: 'user',
-                sender: player.name,
-                text,
-                teamId: player.teamId || undefined
-            });
-            emitRoomState(roomCode);
+            (0, AuctionEngine_1.addChatMessage)(room, { type: 'user', sender: player.name, text, teamId: player.teamId || undefined });
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(send_chat) failed:`, err);
         }
     });
+    // -- toggle_pause --
     socket.on('toggle_pause', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'toggle_pause');
-            if (!room) {
-                console.error(`[Pause] Toggle failed: room ${roomCode} not found`);
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'toggle_pause');
+            if (!room)
                 return;
-            }
             if (room.state.hostId !== socket.id) {
-                console.warn(`[Pause] Toggle rejected: ${socket.id} is not host (host is ${room.state.hostId}) in room ${roomCode}`);
                 socket.emit('error', { message: 'Only host can pause/resume' });
                 return;
             }
             const currentPaused = room.state.auction.isPaused;
             room.state.auction.isPaused = !currentPaused;
             if (room.state.auction.isPaused) {
-                // Pause: clear all active timers/timeouts
-                clearAllTimers(room);
-                logAuctionEvent(room, 'auction_paused');
-                console.log(`[Pause] Auction paused in room ${roomCode}`);
+                (0, RoomManager_1.clearAllTimers)(room);
+                (0, Telemetry_1.logAuctionEvent)(room, 'auction_paused');
             }
             else {
-                // Resume: restart timers based on the current phase
                 const phase = room.state.auction.phase;
                 console.log(`[Pause] Resuming auction in room ${roomCode}, phase: ${phase}`);
                 if (phase === 'bidding') {
-                    startTimer(room);
-                    scheduleAiBids(room);
+                    (0, AuctionEngine_1.startTimer)(room);
+                    (0, AuctionEngine_1.scheduleAiBids)(room);
                 }
                 else if (phase === 'sold' || phase === 'unsold') {
-                    scheduleAutoAdvance(room, AUCTION_DELAY_RESOLVE_TO_NEXT_MS, 'resume_from_result_phase');
+                    (0, AuctionEngine_1.scheduleAutoAdvance)(room, 5000, 'resume_from_result_phase'); // brief delay so host sees resumed state
                 }
                 else if (phase === 'advancing') {
-                    scheduleAutoAdvance(room, AUCTION_DELAY_ADVANCE_TO_BIDDING_MS, 'resume_from_advancing_phase');
+                    (0, AuctionEngine_1.scheduleAutoAdvance)(room, 1000, 'resume_from_advancing_phase');
                 }
-                logAuctionEvent(room, 'auction_resumed', { phase });
+                (0, Telemetry_1.logAuctionEvent)(room, 'auction_resumed', { phase });
             }
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(toggle_pause) failed:`, err);
         }
     });
+    // -- end_auction --
     socket.on('end_auction', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'end_auction');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'end_auction');
             if (!room || room.state.hostId !== socket.id)
                 return;
-            clearAllTimers(room);
+            (0, RoomManager_1.clearAllTimers)(room);
             room.state.auction.currentPlayerIndex = room.state.auction.auctionQueue.length;
-            room.state.auction.phase = 'waiting'; // Skip to results
+            room.state.auction.phase = 'waiting';
             io.to(roomCode).emit('auction_complete', room.state);
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(end_auction) failed:`, err);
         }
     });
-    const handleLeaveRoom = (socketId, isDisconnect = false) => {
-        try {
-            rooms.forEach((room, roomCode) => {
-                const playerIndex = room.state.players.findIndex(p => p.socketId === socketId);
-                if (playerIndex !== -1) {
-                    const player = room.state.players[playerIndex];
-                    if (isDisconnect) {
-                        // 1. Mark socket as empty
-                        // 1. Mark socket as empty but preserve team ownership during grace period
-                        player.socketId = '';
-                        // We DO NOT clear ownerId here anymore. This prevents "team stealing" during a temporary refresh/disconnect.
-                        // Emit immediately so other players see they went offline
-                        emitRoomState(roomCode);
-                        // 2. Set up the reconnect grace period (120 seconds)
-                        const key = getReconnectKey(roomCode, player);
-                        // Clear any existing timeout for this player
-                        const oldTimeout = reconnectTimeouts.get(key);
-                        if (oldTimeout)
-                            clearTimeout(oldTimeout);
-                        const timeout = setTimeout(() => {
-                            reconnectTimeouts.delete(key);
-                            // Fetch the room and player again, in case the room was deleted or player state changed
-                            const currentRoom = rooms.get(roomCode);
-                            if (!currentRoom)
-                                return;
-                            const currentPlayerIndex = currentRoom.state.players.findIndex(p => p.userId === player.userId || p.name === player.name);
-                            if (currentPlayerIndex === -1)
-                                return;
-                            const currentPlayer = currentRoom.state.players[currentPlayerIndex];
-                            if (currentPlayer.socketId !== '') {
-                                // They reconnected, do nothing!
-                                return;
-                            }
-                            // They did not reconnect in time. Handle actual leave!
-                            const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
-                            // Handle Host Transfer if they were the host AND room is NOT locked
-                            // If room is locked, we want to preserve host privileges even if they are offline.
-                            if (currentPlayer.isHost && !currentRoom.state.isLocked) {
-                                currentPlayer.isHost = false;
-                                if (activePlayers.length > 0) {
-                                    const nextHost = activePlayers[0];
-                                    nextHost.isHost = true;
-                                    currentRoom.state.hostId = nextHost.socketId;
-                                }
-                            }
-                            // Cleanup player if room is NOT locked
-                            if (!currentRoom.state.isLocked) {
-                                if (currentPlayer.teamId) {
-                                    currentRoom.state.teams[currentPlayer.teamId].ownerId = null;
-                                    currentRoom.state.teams[currentPlayer.teamId].ownerName = null;
-                                }
-                                currentRoom.state.players.splice(currentPlayerIndex, 1);
-                            }
-                            // Handle room deletion if no active players are left
-                            const remainingActive = currentRoom.state.players.filter(p => p.socketId !== '');
-                            if (remainingActive.length === 0) {
-                                if (currentRoom.deletionTimeout)
-                                    clearTimeout(currentRoom.deletionTimeout);
-                                // Wait 60 minutes instead of 60 seconds before destroying room
-                                currentRoom.deletionTimeout = setTimeout(() => {
-                                    const checkRoom = rooms.get(roomCode);
-                                    if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
-                                        console.log(`[Room Lifecycle] Deleting room ${roomCode} due to inactivity. Invalidating ${rooms.size} active rooms if any matched.`);
-                                        clearAllTimers(checkRoom);
-                                        // Increment generation number before deletion to invalidate all stale references
-                                        checkRoom.roomGeneration++;
-                                        console.error(`[DIAGNOSTICS: ROOM DESTRUCTION] Trigger: Empty player cleanup timeout`, { roomCode, phase: checkRoom.state.auction.phase });
-                                        rooms.delete(roomCode);
-                                        recordLifecycle(checkRoom, 'room_deleted_timeout');
-                                        console.log(`[Room Lifecycle] Room ${roomCode} deleted (generation was ${checkRoom.roomGeneration - 1}).`);
-                                    }
-                                }, 3600000);
-                            }
-                            emitRoomState(roomCode);
-                        }, 300000); // 5 minutes (300s) grace period instead of 120s
-                        reconnectTimeouts.set(key, timeout);
-                        return;
-                    }
-                    if (!isDisconnect && room.state.isLocked) {
-                        // Treat explicit room leave during a live auction as a temporary disconnect.
-                        const clientSocket = io.sockets.sockets.get(socketId);
-                        if (clientSocket) {
-                            clientSocket.leave(roomCode);
-                        }
-                        handleLeaveRoom(socketId, true);
-                        return;
-                    }
-                    // --- Explicit Leave Room (socket.emit('leave_room')) ---
-                    // Cancel any pending reconnect timeout
-                    const explicitKey = getReconnectKey(roomCode, player);
-                    const legacyExplicitKey = `${roomCode}_${player.name}`;
-                    [explicitKey, legacyExplicitKey].forEach((key) => {
-                        const pending = reconnectTimeouts.get(key);
-                        if (pending) {
-                            clearTimeout(pending);
-                            reconnectTimeouts.delete(key);
-                        }
-                    });
-                    if (player.teamId) {
-                        room.state.teams[player.teamId].ownerId = null;
-                        room.state.teams[player.teamId].ownerName = null;
-                    }
-                    room.state.players.splice(playerIndex, 1);
-                    const clientSocket = io.sockets.sockets.get(socketId);
-                    if (clientSocket) {
-                        clientSocket.leave(roomCode);
-                    }
-                    const activePlayers = room.state.players.filter(p => p.socketId !== '');
-                    if (room.state.players.length === 0) {
-                        clearAllTimers(room);
-                        // Increment generation number before deletion to invalidate all stale references
-                        room.roomGeneration++;
-                        console.error(`[DIAGNOSTICS: ROOM DESTRUCTION] Trigger: Immediate explicit leave (no players left)`, { roomCode, phase: room.state.auction.phase });
-                        rooms.delete(roomCode);
-                        recordLifecycle(room, 'room_deleted_immediate');
-                        console.log(`[Room] Room ${roomCode} deleted immediately (0 players left). Generation: ${room.roomGeneration - 1}`);
-                    }
-                    else if (activePlayers.length === 0) {
-                        // If all remaining players are disconnected, start the deletion timeout rather than instant kill
-                        if (room.deletionTimeout)
-                            clearTimeout(room.deletionTimeout);
-                        room.deletionTimeout = setTimeout(() => {
-                            const checkRoom = rooms.get(roomCode);
-                            if (checkRoom && checkRoom.state.players.every(p => p.socketId === '')) {
-                                clearAllTimers(checkRoom);
-                                checkRoom.roomGeneration++;
-                                console.error(`[DIAGNOSTICS: ROOM DESTRUCTION] Trigger: Explicit leave timeout`, { roomCode, phase: checkRoom.state.auction.phase });
-                                rooms.delete(roomCode);
-                                recordLifecycle(checkRoom, 'room_deleted_timeout');
-                            }
-                        }, 3600000);
-                    }
-                    else if (player.isHost) {
-                        const nextHost = activePlayers[0];
-                        nextHost.isHost = true;
-                        room.state.hostId = nextHost.socketId;
-                        console.log(`[Room] Host left room ${roomCode}, new host is ${nextHost.name}`);
-                        emitRoomState(roomCode);
-                    }
-                    else {
-                        console.log(`[Room] Player ${player.name} left room ${roomCode}`);
-                        emitRoomState(roomCode);
-                    }
-                }
-            });
-        }
-        catch (err) {
-            console.error(`[DIAGNOSTICS: ERROR] handleLeaveRoom failed:`, err);
-        }
-    };
+    // -- leave_room --
     socket.on('leave_room', () => {
         handleLeaveRoom(socket.id, false);
     });
+    // -- kick_player --
     socket.on('kick_player', ({ roomCode, targetSocketId }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'kick_player');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'kick_player');
             if (!room || room.state.hostId !== socket.id)
                 return;
-            // Find player and remove them
             const playerIndex = room.state.players.findIndex(p => p.socketId === targetSocketId);
             if (playerIndex !== -1) {
                 const player = room.state.players[playerIndex];
@@ -1132,37 +390,38 @@ io.on('connection', (socket) => {
                     room.state.teams[player.teamId].ownerName = null;
                 }
                 room.state.players.splice(playerIndex, 1);
-                // Emit kicked event to that specific socket
                 io.to(targetSocketId).emit('kicked');
                 const targetSocket = io.sockets.sockets.get(targetSocketId);
-                if (targetSocket) {
+                if (targetSocket)
                     targetSocket.leave(roomCode);
-                }
-                emitRoomState(roomCode);
+                emit(roomCode);
             }
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(kick_player) failed:`, err);
         }
     });
+    // -- disconnect --
     socket.on('disconnect', () => {
         handleLeaveRoom(socket.id, true);
     });
+    // -- request_room_state --
     socket.on('request_room_state', ({ roomCode }) => {
         try {
-            const room = getRoomOrNotify(socket, roomCode, 'request_room_state');
+            const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'request_room_state');
             if (!room)
                 return;
             socket.join(roomCode);
-            emitRoomState(roomCode);
+            emit(roomCode);
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(request_room_state) failed:`, err);
         }
     });
 });
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3005;
-// Global error handlers to catch uncaught exceptions
+// ---------------------------------------------------------------------------
+// Global error handlers
+// ---------------------------------------------------------------------------
 process.on('uncaughtException', (error) => {
     console.error('[CRITICAL] Uncaught Exception - Server continuing:', error);
     console.error('Stack:', error.stack);
@@ -1171,19 +430,18 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('[CRITICAL] Unhandled Rejection:', reason);
     console.error('Promise:', promise);
 });
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3005;
 async function startServer() {
     console.log('Initializing automatic IPL player image resolution system...');
-    await (0, playerImageResolver_1.resolveAllPlayerImages)(PLAYERS);
+    await (0, playerImageResolver_1.resolveAllPlayerImages)(constants_1.PLAYERS);
     httpServer.listen(PORT, () => {
         console.log(`Server listening on port ${PORT}`);
         console.log(`[Server] Active room supervision enabled with stale reference detection`);
-        console.log(`[Server] Global error handlers active for uncaughtException and unhandledRejection`);
-        // ============================================================
-        // KEEP-ALIVE SELF-PING
-        // Render's free tier spins down the server after ~15 minutes
-        // of no HTTP traffic. This pings our own /health endpoint
-        // every 10 minutes to prevent spin-down during active games.
-        // ============================================================
+        console.log(`[Server] Global error handlers active`);
+        // Keep-alive self-ping (prevents Render free-tier spin-down)
         const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
         if (RENDER_URL) {
             const keepAliveInterval = 10 * 60 * 1000; // 10 minutes
