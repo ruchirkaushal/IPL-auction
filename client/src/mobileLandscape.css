@@ -1,13 +1,24 @@
 /* mobileLandscape.css */
+/* MOBILE LANDSCAPE OPTIMIZATION - Production Polish Pass */
 /* SCOPED: Only active inside .mobile-landscape-mode wrapper */
+
+/* =========================================================
+   0. VIEWPORT & LAYOUT FOUNDATION
+   ========================================================= */
+/* Ensure no page scrolling - fit within viewport */
+.mobile-landscape-mode {
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+}
 
 /* =========================================================
    1. PLAYER GRAPHICS & CENTER OF GRAVITY
    ========================================================= */
-/* Player graphic container — move down slightly to lower center of gravity, scale down ~5-8% */
+/* Player graphic container — optimized scale and positioning */
 .mobile-landscape-mode .player-graphic-container {
-    transform: scale(0.44) scaleX(1.15) !important;
-    bottom: -15px !important; /* Add slight bottom breathing room */
+    transform: scale(0.38) scaleX(1.15) !important;
+    bottom: -8px !important;
 }
 
 /* Player portrait images */
@@ -21,113 +32,211 @@
 }
 
 /* =========================================================
-   2. GLOBAL FONT REDUCTION — readable mobile sizes (slightly larger than previous)
+   2. GLOBAL FONT SIZING - Balanced readability
    ========================================================= */
+/* Keep important content readable, reduce only secondary text */
 .mobile-landscape-mode { font-size: 11px !important; }
-.mobile-landscape-mode h1 { font-size: 15px !important; }
-.mobile-landscape-mode h2 { font-size: 10px !important; }
-.mobile-landscape-mode h3 { font-size: 15px !important; }
-.mobile-landscape-mode p { font-size: 10px !important; }
-.mobile-landscape-mode .text-xs { font-size: 10px !important; }
-.mobile-landscape-mode .text-sm { font-size: 11px !important; }
+.mobile-landscape-mode h1 { font-size: 16px !important; }
+.mobile-landscape-mode h2 { font-size: 11px !important; }
+.mobile-landscape-mode h3 { font-size: 16px !important; }
+.mobile-landscape-mode p { font-size: 11px !important; }
+.mobile-landscape-mode .text-xs { font-size: 9px !important; }
+.mobile-landscape-mode .text-sm { font-size: 10px !important; }
 .mobile-landscape-mode .text-base { font-size: 12px !important; }
 .mobile-landscape-mode .text-lg { font-size: 14px !important; }
 .mobile-landscape-mode .text-xl { font-size: 15px !important; }
 .mobile-landscape-mode .text-2xl { font-size: 16px !important; }
 
 /* =========================================================
-   3. COMPRESS TEAM STANDINGS PANEL (Fit 3-4 cards)
+   3. TEAM STANDINGS PANEL - Compact & Fit 4-5 cards
    ========================================================= */
 .mobile-landscape-mode .team-panel-root {
-    padding: 6px 4px !important;
-    padding-top: max(6px, env(safe-area-inset-top)) !important; /* fix cut off header */
+    padding: 3px 2px !important;
+    padding-top: max(3px, env(safe-area-inset-top)) !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
+
+.mobile-landscape-mode .team-panel-root > div:first-child {
+    margin-bottom: 4px !important;
+}
+
+.mobile-landscape-mode .team-panel-root h2 {
+    font-size: 9px !important;
+    margin-bottom: 0px !important;
+}
+
 .mobile-landscape-mode .team-panel-root h3 {
-    font-size: 14px !important;
+    font-size: 13px !important;
     margin-bottom: 2px !important;
 }
+
+/* Compress team cards */
 .mobile-landscape-mode .team-panel-card {
-    padding: 4px 6px !important;
-    margin-bottom: 3px !important;
+    padding: 3px 4px !important;
+    margin-bottom: 2px !important;
     border-radius: 6px !important;
 }
+
 .mobile-landscape-mode .team-panel-card-header {
-    padding: 4px 6px !important;
+    padding: 3px 4px !important;
 }
+
+.mobile-landscape-mode .team-panel-card-header p {
+    font-size: 10px !important;
+}
+
 .mobile-landscape-mode .team-panel-logo {
-    width: 16px !important;
-    height: 16px !important;
+    width: 14px !important;
+    height: 14px !important;
 }
+
 .mobile-landscape-mode .team-panel-stats {
     margin-top: 1px !important;
+    font-size: 9px !important;
+}
+
+.mobile-landscape-mode .team-panel-purse {
+    font-size: 11px !important;
 }
 
 /* =========================================================
-   4. COMPRESS CHAT PANEL
+   4. CHAT PANEL - Compact messaging
    ========================================================= */
 .mobile-landscape-mode .chat-panel-root {
-    padding: 4px !important;
-    padding-top: max(6px, env(safe-area-inset-top)) !important;
+    padding: 3px 2px !important;
+    padding-top: max(3px, env(safe-area-inset-top)) !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
+
+/* Compact header */
+.mobile-landscape-mode .chat-panel-root > div:first-child {
+    padding: 3px 2px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    margin-bottom: 2px !important;
+}
+
+.mobile-landscape-mode .chat-panel-root h2 {
+    font-size: 9px !important;
+    margin-bottom: 0px !important;
+}
+
+.mobile-landscape-mode .chat-panel-root h3 {
+    font-size: 12px !important;
+    margin-bottom: 1px !important;
+}
+
+/* Message container */
 .mobile-landscape-mode .chat-message-container {
-    padding: 4px !important;
-    gap: 3px !important;
+    padding: 2px !important;
+    gap: 2px !important;
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
 }
+
+/* Compact messages */
 .mobile-landscape-mode .chat-message-item {
-    padding: 3px 5px !important;
-    border-radius: 6px !important;
+    padding: 2px 3px !important;
+    border-radius: 4px !important;
+    font-size: 9px !important;
+    line-height: 1.2 !important;
 }
+
+/* Form controls */
 .mobile-landscape-mode form {
-    padding: 4px !important;
+    padding: 2px !important;
+    gap: 2px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
-.mobile-landscape-mode input {
-    padding: 4px 8px !important;
-    border-radius: 6px !important;
-    height: 28px !important;
+
+.mobile-landscape-mode input[type="text"] {
+    padding: 3px 6px !important;
+    border-radius: 4px !important;
+    height: 24px !important;
+    font-size: 10px !important;
 }
+
 .mobile-landscape-mode button[type="submit"] {
-    padding: 4px !important;
-    border-radius: 6px !important;
-    height: 28px !important;
-    width: 28px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    height: 24px !important;
+    width: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
 }
 
 /* =========================================================
-   5. BID BUTTON & CENTER LOGO OVERLAYS
+   5. BID BUTTON & CONTROLS - Strategic positioning
    ========================================================= */
 .mobile-landscape-mode .bid-btn {
     box-shadow: 0 0 6px rgba(0,229,255,0.2) !important;
-    height: 32px !important;
-    padding: 0 16px !important;
+    height: 28px !important;
+    padding: 0 12px !important;
+    font-size: 11px !important;
 }
+
+.mobile-landscape-mode .bottom-controls-area {
+    padding: 2px 4px !important;
+}
+
 .mobile-landscape-mode .bottom-controls-area .bg-\[\#001120\]\/90 {
     box-shadow: 0 0 4px rgba(0,229,255,0.15) !important;
     border-width: 1px !important;
-    width: 32px !important;
-    height: 32px !important;
+    width: 28px !important;
+    height: 28px !important;
 }
 
 /* =========================================================
-   6. STATS PANEL READABILITY
+   6. STATS PANEL - Improved hierarchy and readability
    ========================================================= */
 .mobile-landscape-mode .stats-strip {
-    background-color: rgba(0, 17, 32, 0.95) !important; /* Increase opacity */
+    background-color: rgba(0, 17, 32, 0.95) !important;
     box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.4), 0 10px 20px rgba(0, 0, 0, 0.9) !important;
+    padding: 3px 6px !important;
 }
+
 .mobile-landscape-mode .stats-strip .text-white {
     text-shadow: 0 1px 3px rgba(0,0,0,0.9) !important;
     color: #fff !important;
+    font-size: 12px !important;
 }
+
 .mobile-landscape-mode .stats-strip .text-gray-400 {
-    color: rgba(255, 255, 255, 0.8) !important; /* brighter labels */
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 9px !important;
 }
 
 /* =========================================================
-   7. HEADER
+   7. HEADER OPTIMIZATION - Single line layout
    ========================================================= */
 .mobile-landscape-mode .top-header-overlay {
-    top: max(3px, env(safe-area-inset-top)) !important;
+    top: max(2px, env(safe-area-inset-top)) !important;
+    left: 2px !important;
+    right: 2px !important;
+}
+
+.mobile-landscape-mode .top-header-overlay img {
+    height: 3px !important;
+}
+
+/* =========================================================
+   8. REMOVE SCALE TRANSFORMS - Use real CSS instead
+   ========================================================= */
+/* Remove scaling that was compressing content */
+.mobile-landscape-mode .scale-\[0\.85\] {
+    transform: none !important;
+    width: 100% !important;
+}
+
+.mobile-landscape-mode .origin-top-left {
+    transform-origin: top left !important;
+}
+
+.mobile-landscape-mode .w-\[117\.6\%\] {
+    width: 100% !important;
 }
