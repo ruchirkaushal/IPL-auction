@@ -1,7 +1,16 @@
 /* mobileLandscape.css */
 /* MOBILE LANDSCAPE OPTIMIZATION - Production Polish Pass */
 /* SCOPED: Only active inside .mobile-landscape-mode wrapper */
-/* These styles ONLY apply when .mobile-landscape-mode class is present */
+
+/* =========================================================
+   0. VIEWPORT & LAYOUT FOUNDATION
+   ========================================================= */
+/* Ensure no page scrolling - fit within viewport */
+.mobile-landscape-mode {
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+}
 
 /* =========================================================
    1. PLAYER GRAPHICS & CENTER OF GRAVITY
@@ -41,15 +50,16 @@
 /* =========================================================
    3. TEAM STANDINGS PANEL - Compact & Fit 4-5 cards
    ========================================================= */
-/* Override desktop padding with mobile compact padding */
 .mobile-landscape-mode .team-panel-root {
     padding: 3px 2px !important;
     padding-top: max(3px, env(safe-area-inset-top)) !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
-/* Override header spacing */
-.mobile-landscape-mode .team-panel-root > div {
-    margin-bottom: 2px !important;
+.mobile-landscape-mode .team-panel-root > div:first-child {
+    margin-bottom: 4px !important;
 }
 
 .mobile-landscape-mode .team-panel-root h2 {
@@ -59,55 +69,54 @@
 
 .mobile-landscape-mode .team-panel-root h3 {
     font-size: 13px !important;
-    margin-bottom: 1px !important;
-}
-
-/* Override desktop card spacing: p-4 → p-2 equivalent */
-.mobile-landscape-mode .team-panel-card {
-    padding: 3px 4px !important;
     margin-bottom: 2px !important;
 }
 
-/* Override card header padding */
+/* Compress team cards */
+.mobile-landscape-mode .team-panel-card {
+    padding: 3px 4px !important;
+    margin-bottom: 2px !important;
+    border-radius: 6px !important;
+}
+
 .mobile-landscape-mode .team-panel-card-header {
     padding: 3px 4px !important;
-    margin-bottom: 0 !important;
 }
 
 .mobile-landscape-mode .team-panel-card-header p {
     font-size: 10px !important;
 }
 
-/* Override logo size: w-6 h-6 → w-4 h-4 */
 .mobile-landscape-mode .team-panel-logo {
     width: 14px !important;
     height: 14px !important;
 }
 
-/* Override stats spacing */
 .mobile-landscape-mode .team-panel-stats {
     margin-top: 1px !important;
     font-size: 9px !important;
-    gap: 1px !important;
 }
 
 .mobile-landscape-mode .team-panel-purse {
-    font-size: 10px !important;
+    font-size: 11px !important;
 }
 
 /* =========================================================
    4. CHAT PANEL - Compact messaging
    ========================================================= */
-/* Override desktop padding */
 .mobile-landscape-mode .chat-panel-root {
-    padding: 0 !important;
-    padding-top: max(0, env(safe-area-inset-top)) !important;
+    padding: 3px 2px !important;
+    padding-top: max(3px, env(safe-area-inset-top)) !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
-/* Override header padding: p-5 → p-2 equivalent */
-.mobile-landscape-mode .chat-panel-root > div {
-    padding: 2px !important;
-    margin-bottom: 1px !important;
+/* Compact header */
+.mobile-landscape-mode .chat-panel-root > div:first-child {
+    padding: 3px 2px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    margin-bottom: 2px !important;
 }
 
 .mobile-landscape-mode .chat-panel-root h2 {
@@ -116,35 +125,38 @@
 }
 
 .mobile-landscape-mode .chat-panel-root h3 {
-    font-size: 11px !important;
-    margin-bottom: 0px !important;
+    font-size: 12px !important;
+    margin-bottom: 1px !important;
 }
 
-/* Override message container: p-5 space-y-3.5 → p-1.5 space-y-1 */
+/* Message container */
 .mobile-landscape-mode .chat-message-container {
     padding: 2px !important;
     gap: 2px !important;
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
 }
 
-/* Override message items: py-2 px-3.5 → py-1 px-2 */
+/* Compact messages */
 .mobile-landscape-mode .chat-message-item {
     padding: 2px 3px !important;
     border-radius: 4px !important;
-    font-size: 8px !important;
+    font-size: 9px !important;
+    line-height: 1.2 !important;
 }
 
-/* Override form: p-4 → p-2 equivalent */
+/* Form controls */
 .mobile-landscape-mode form {
     padding: 2px !important;
     gap: 2px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Override input: py-2.5 → py-1.5 equivalent */
 .mobile-landscape-mode input[type="text"] {
     padding: 3px 6px !important;
     border-radius: 4px !important;
     height: 24px !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
 }
 
 .mobile-landscape-mode button[type="submit"] {
@@ -213,14 +225,18 @@
 }
 
 /* =========================================================
-   8. ADDITIONAL MOBILE OPTIMIZATIONS
+   8. REMOVE SCALE TRANSFORMS - Use real CSS instead
    ========================================================= */
-/* Ensure proper scrolling behavior in mobile landscape */
-.mobile-landscape-mode .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+/* Remove scaling that was compressing content */
+.mobile-landscape-mode .scale-\[0\.85\] {
+    transform: none !important;
+    width: 100% !important;
 }
 
-.mobile-landscape-mode .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
+.mobile-landscape-mode .origin-top-left {
+    transform-origin: top left !important;
+}
+
+.mobile-landscape-mode .w-\[117\.6\%\] {
+    width: 100% !important;
 }
