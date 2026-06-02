@@ -179,7 +179,7 @@ export const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boo
       if (state.teams[id].status === 'leading') state.teams[id].status = 'idle';
     });
     team.status = 'leading';
-    state.auction.ticks = Number(process.env.AUCTION_START_TICKS ?? 100);
+    state.auction.ticks = AUCTION_START_TICKS;
 
     state.auction.nextBidAmount = getAuthoritativeNextBid(state);
 
