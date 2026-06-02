@@ -4,7 +4,7 @@ exports.SOCKET_RECOVERY_WINDOW_MS = exports.SOCKET_PING_TIMEOUT_MS = exports.SOC
 const allPlayers_1 = require("./lib/allPlayers");
 exports.ALL_TEAM_IDS = ['MI', 'CSK', 'RCB', 'KKR', 'DC', 'RR', 'PBKS', 'SRH', 'GT', 'LSG'];
 exports.PLAYERS = allPlayers_1.ALL_PLAYERS;
-exports.AUCTION_START_TICKS = Number(process.env.AUCTION_START_TICKS ?? 70);
+exports.AUCTION_START_TICKS = Number(process.env.AUCTION_START_TICKS ?? 100);
 exports.AUCTION_TIMER_TICK_MS = Number(process.env.AUCTION_TIMER_TICK_MS ?? 100);
 exports.AUCTION_DELAY_RESOLVE_TO_NEXT_MS = Number(process.env.AUCTION_DELAY_RESOLVE_TO_NEXT_MS ?? 4000);
 exports.AUCTION_DELAY_ADVANCE_TO_BIDDING_MS = Number(process.env.AUCTION_DELAY_ADVANCE_TO_BIDDING_MS ?? 1000);

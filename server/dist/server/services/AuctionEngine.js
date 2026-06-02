@@ -160,7 +160,7 @@ const placeBid = (room, teamId, isAI = false) => {
                 state.teams[id].status = 'idle';
         });
         team.status = 'leading';
-        state.auction.ticks = constants_1.AUCTION_START_TICKS;
+        state.auction.ticks = Number(process.env.AUCTION_START_TICKS ?? 100);
         state.auction.nextBidAmount = (0, exports.getAuthoritativeNextBid)(state);
         _io.to(state.roomCode).emit('bid_placed', { teamId, teamName: teamId, amount: normalizedAmount, isAI });
         (0, exports.addChatMessage)(room, { type: 'system_bid', teamId, playerName: player.name, amount: normalizedAmount });
