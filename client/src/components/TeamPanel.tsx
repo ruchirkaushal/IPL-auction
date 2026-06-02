@@ -158,6 +158,7 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
                                       />
                                     </div>
                                     <span className="text-xs text-white font-medium truncate">{player.name}</span>
+                                    {player.isOverseas && <span className="text-[10px] opacity-70 flex-shrink-0" title={player.country}>✈️</span>}
                                   </div>
                                   <span className="text-xs font-bold text-[#F5A623] font-outfit ml-2">
                                     {formatAuctionMoney(player.price)}
