@@ -6,6 +6,22 @@ import { useSocketContext } from '../SocketContext';
 import { useAuctionState } from '../hooks/useAuctionState';
 import { TEAMS } from '../constants/teams';
 
+const COUNTRY_CODES: Record<string, string> = {
+  'India': 'IND',
+  'South Africa': 'SA',
+  'New Zealand': 'NZ',
+  'England': 'ENG',
+  'Australia': 'AUS',
+  'West Indies': 'WI',
+  'Sri Lanka': 'SL',
+  'Bangladesh': 'BAN',
+  'Afghanistan': 'AFG',
+  'Ireland': 'IRE',
+  'Zimbabwe': 'ZIM',
+  'Netherlands': 'NED',
+  'USA': 'USA'
+};
+
 interface VideoPlayerProps {
   videoRef: RefObject<HTMLVideoElement | null>;
   videoPhase: VideoPhase;
@@ -132,8 +148,9 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
       items.push({ label: 'WICKETS', value: stats.wickets ?? 'N/A' });
     }
 
-    if (stats.previousTeam) {
-      items.push({ label: 'PREVIOUS', value: stats.previousTeam });
+    if (currentPlayer.country) {
+      const countryCode = COUNTRY_CODES[currentPlayer.country] || currentPlayer.country;
+      items.push({ label: 'COUNTRY', value: countryCode });
     }
 
     return items.map((item, i) => (
