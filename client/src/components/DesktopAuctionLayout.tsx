@@ -45,6 +45,7 @@ export default function DesktopAuctionLayout({
   roomCode,
   roomState,
   allPlayers,
+  myTeamId,
   videoManager,
   canUserBid,
   isHost,
@@ -54,6 +55,11 @@ export default function DesktopAuctionLayout({
   actions
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
+  const [isBidding, setIsBidding] = useState(false);
+
+  useEffect(() => {
+    setIsBidding(false);
+  }, [roomState.auction.currentBid, highestBidderId, roomState.auction.currentPlayerIndex]);
 
   useEffect(() => {
     const currentPlayerId = roomState.auction.auctionQueue[roomState.auction.currentPlayerIndex] ?? null;
@@ -142,23 +148,34 @@ export default function DesktopAuctionLayout({
           {/* BID button — bottom right */}
           {roomState.auction.phase === 'bidding' && (
             <div className="absolute bottom-48 right-10 z-30">
-              <button
-                onClick={() => {
-                  if (!roomCode || !canUserBid) return;
-                  actions.placeBid(roomCode);
-                }}
-                disabled={!canUserBid}
-                className={`
-                  w-40 h-16 rounded-2xl font-black tracking-widest uppercase 
-                  transition-all duration-300 border-2
-                  ${canUserBid
-                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400 hover:scale-[1.05] active:scale-[0.95] shadow-[0_0_30px_rgba(0,229,255,0.5)] border-[#00e5ff]'
-                    : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
-                  }
-                `}
-              >
-                BID
-              </button>
+              {highestBidderId === myTeamId ? (
+                <button
+                  disabled
+                  className="w-40 h-16 rounded-2xl font-black tracking-widest uppercase transition-all duration-300 border-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/50 cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  LEADING
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (!roomCode || !canUserBid || isBidding) return;
+                    setIsBidding(true);
+                    actions.placeBid(roomCode);
+                    setTimeout(() => setIsBidding(false), 500);
+                  }}
+                  disabled={!canUserBid || isBidding}
+                  className={`
+                    w-40 h-16 rounded-2xl font-black tracking-widest uppercase 
+                    transition-all duration-300 border-2
+                    ${(canUserBid && !isBidding)
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400 hover:scale-[1.05] active:scale-[0.95] shadow-[0_0_30px_rgba(0,229,255,0.5)] border-[#00e5ff]'
+                      : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
+                    }
+                  `}
+                >
+                  {isBidding ? '...' : 'BID'}
+                </button>
+              )}
             </div>
           )}
         </div>

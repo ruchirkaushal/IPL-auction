@@ -46,6 +46,7 @@ export default function MobileLandscapeAuction({
   roomCode,
   roomState,
   allPlayers,
+  myTeamId,
   videoManager,
   canUserBid,
   isHost,
@@ -55,6 +56,11 @@ export default function MobileLandscapeAuction({
   actions
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
+  const [isBidding, setIsBidding] = useState(false);
+
+  useEffect(() => {
+    setIsBidding(false);
+  }, [roomState.auction.currentBid, highestBidderId, roomState.auction.currentPlayerIndex]);
 
   useEffect(() => {
     const currentPlayerId = roomState.auction.auctionQueue[roomState.auction.currentPlayerIndex] ?? null;
@@ -143,23 +149,34 @@ export default function MobileLandscapeAuction({
           {/* BID button */}
           <div className="z-30 pointer-events-auto">
             {roomState.auction.phase === 'bidding' && (
-              <button
-                onClick={() => {
-                  if (!roomCode || !canUserBid) return;
-                  actions.placeBid(roomCode);
-                }}
-                disabled={!canUserBid}
-                className={`
-                  bid-btn w-24 h-9 rounded-lg font-black text-xs tracking-widest uppercase 
-                  transition-all active:scale-95 border
-                  ${canUserBid
-                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(0,229,255,0.4)] border-[#00e5ff]'
-                    : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
-                  }
-                `}
-              >
-                BID
-              </button>
+              highestBidderId === myTeamId ? (
+                <button
+                  disabled
+                  className="bid-btn w-24 h-9 rounded-lg font-black text-[10px] tracking-widest uppercase transition-all bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                >
+                  LEADING
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (!roomCode || !canUserBid || isBidding) return;
+                    setIsBidding(true);
+                    actions.placeBid(roomCode);
+                    setTimeout(() => setIsBidding(false), 500);
+                  }}
+                  disabled={!canUserBid || isBidding}
+                  className={`
+                    bid-btn w-24 h-9 rounded-lg font-black text-xs tracking-widest uppercase 
+                    transition-all active:scale-95 border
+                    ${(canUserBid && !isBidding)
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(0,229,255,0.4)] border-[#00e5ff]'
+                      : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
+                    }
+                  `}
+                >
+                  {isBidding ? '...' : 'BID'}
+                </button>
+              )
             )}
           </div>
 

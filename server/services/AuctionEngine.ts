@@ -128,6 +128,8 @@ export const scheduleAutoAdvance = (room: Room, delayMs: number, reason: string)
 // placeBid
 // ---------------------------------------------------------------------------
 
+const teamLastBidTimes = new Map<string, number>();
+
 export const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boolean => {
   try {
     const state = room.state;
@@ -150,6 +152,25 @@ export const placeBid = (room: Room, teamId: TeamId, isAI: boolean = false): boo
     if (team.purseRemaining < normalizedAmount) return false;
     if (team.squad.length >= MAX_SQUAD_SIZE) return false;
     if (player.isOverseas && team.overseasCount >= MAX_OVERSEAS_PLAYERS) return false;
+
+    // Fix #1: SERVER AUTHORITATIVE SELF-BID PREVENTION
+    if (state.auction.highestBidderId === teamId) {
+      console.log(`[Bid Rejected]\nReason: Already Highest Bidder\nTeam: ${teamId}`);
+      return false;
+    }
+
+    // Fix #4: BACKEND DUPLICATE EVENT PROTECTION (250ms window)
+    const now = Date.now();
+    const bidKey = `${room.state.roomCode}_${teamId}`;
+    const lastBidTime = teamLastBidTimes.get(bidKey) || 0;
+    if (now - lastBidTime < 250) {
+      console.log(`[Bid Rejected]\nReason: Duplicate Bid Event\nTeam: ${teamId}`);
+      return false;
+    }
+    teamLastBidTimes.set(bidKey, now);
+
+    // Fix #5: DIAGNOSTIC LOGGING
+    console.log(`[Bid Accepted]\nTeam: ${teamId}\nAmount: ${formatAuctionMoney(normalizedAmount)}`);
 
     state.auction.currentBid = normalizedAmount;
     state.auction.highestBidderId = teamId;
