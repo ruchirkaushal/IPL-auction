@@ -341,3 +341,49 @@ body:has(.mobile-landscape-mode), html:has(.mobile-landscape-mode) {
     width: auto !important;
     min-width: 60px !important;
 }
+
+/* =========================================================
+   10. PLAYER GRAPHICS TEXT FITTING (MOBILE ONLY)
+   ========================================================= */
+/* Container query setup for proportional text scaling */
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[44\%\] {
+    container-type: inline-size;
+    padding: 0 4px !important;
+}
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[28\%\] {
+    container-type: inline-size;
+    padding: 0 4px !important;
+}
+
+/* FIRST NAME */
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[44\%\] > span:nth-of-type(1) {
+    font-size: clamp(14px, 10cqi, 30px) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+}
+
+/* LAST NAME */
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[44\%\] > span:nth-of-type(2) {
+    font-size: clamp(24px, 18cqi, 62px) !important;
+    line-height: 0.8 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+}
+
+/* BASE PRICE / CURRENT BID VALUES */
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[28\%\] > div,
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[28\%\] > span.text-white {
+    font-size: clamp(18px, 18cqi, 38px) !important;
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
+}
+.mobile-landscape-mode .broadcast-graphic-wrapper .w-\[28\%\] > div > span {
+    font-size: clamp(18px, 18cqi, 38px) !important;
+}
