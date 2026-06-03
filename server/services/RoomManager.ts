@@ -129,7 +129,7 @@ export const makeInitialRoomState = (roomCode: string, hostSocketId: string, hos
   return {
     roomCode,
     hostId: hostSocketId,
-    players: [{ socketId: hostSocketId, userId: hostUserId, name: hostName, teamId: null, isHost: true, isReady: false }],
+    players: [{ socketId: hostSocketId, userId: hostUserId, name: hostName, teamId: null, isHost: true, isReady: false, presenceStatus: 'active' }],
     teams: initialTeams,
     auction: {
       isStarted: false,
@@ -225,6 +225,7 @@ export const makeHandleLeaveRoom = (
 
         if (isDisconnect) {
           player.socketId = '';
+          player.presenceStatus = 'left';
           emitState(roomCode);
 
           const key = getReconnectKey(roomCode, player);

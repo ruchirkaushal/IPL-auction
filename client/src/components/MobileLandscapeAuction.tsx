@@ -75,7 +75,7 @@ export default function MobileLandscapeAuction({
       {/* Left panel: Team Standings (Compact) */}
       <div className="w-[26%] h-full border-r border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
         <div className="h-full overflow-y-auto custom-scrollbar">
-          <TeamPanel teams={roomState.teams} allPlayers={allPlayers} />
+          <TeamPanel teams={roomState.teams} allPlayers={allPlayers} roomPlayers={roomState.players} />
         </div>
       </div>
 

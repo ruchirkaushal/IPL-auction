@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import type { TeamState, Player } from '../types';
+import type { TeamState, Player, RoomPlayer } from '../types';
 import { TEAMS } from '../constants/teams';
 import { MAX_SQUAD_SIZE } from '../../../shared/auctionConfig';
 import { formatAuctionMoney } from '../../../shared/auctionPricing';
@@ -8,9 +8,10 @@ import { formatAuctionMoney } from '../../../shared/auctionPricing';
 interface TeamPanelProps {
   teams: Record<string, TeamState>;
   allPlayers: Player[];
+  roomPlayers: RoomPlayer[];
 }
 
-export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
+export default function TeamPanel({ teams, allPlayers, roomPlayers }: TeamPanelProps) {
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
 
   const toggleTeam = (teamId: string) => {
@@ -106,8 +107,23 @@ export default function TeamPanel({ teams, allPlayers }: TeamPanelProps) {
                 </div>
 
                 <div className="team-panel-stats flex justify-between items-center text-xs mt-2 text-gray-400">
-                  <span className="text-[10px] font-medium tracking-wide">
-                    Manager: <span className="text-white font-bold">{team.ownerName || 'AI Engine'}</span>
+                  <span className="text-[10px] font-medium tracking-wide flex items-center gap-1.5">
+                    Manager: 
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const ownerPlayer = roomPlayers?.find(p => p.teamId === team.teamId);
+                        const presence = ownerPlayer?.presenceStatus || 'never_joined';
+                        let dotColor = 'bg-gray-500';
+                        if (presence === 'active') dotColor = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]';
+                        else if (presence === 'afk') dotColor = 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]';
+                        else if (presence === 'left') dotColor = 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]';
+                        
+                        return (
+                          <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} title={`Presence: ${presence}`}></div>
+                        );
+                      })()}
+                      <span className="text-white font-bold">{team.ownerName || 'AI Engine'}</span>
+                    </div>
                   </span>
                   <span className="text-[10px] font-medium tracking-wide">
                     Squad: <span className="text-white font-bold">{team.squad.length}</span>/{MAX_SQUAD_SIZE}

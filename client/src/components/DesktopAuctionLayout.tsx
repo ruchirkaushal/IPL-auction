@@ -74,7 +74,7 @@ export default function DesktopAuctionLayout({
       {/* Left panel: Team Standings */}
       <div className="w-full lg:w-[24%] h-[20%] lg:h-full border-b lg:border-b-0 lg:border-r border-white/5 bg-[#0a0a0a] z-20 shadow-2xl">
         <div className="h-full overflow-y-auto custom-scrollbar">
-          <TeamPanel teams={roomState.teams} allPlayers={allPlayers} />
+          <TeamPanel teams={roomState.teams} allPlayers={allPlayers} roomPlayers={roomState.players} />
         </div>
       </div>
 

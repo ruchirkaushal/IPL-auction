@@ -299,6 +299,13 @@ export const useSocket = () => {
         console.log('[Socket] tab visible; forcing reconnect');
         newSocket.connect();
       }
+      const state = roomStateRef.current;
+      if (state && newSocket.connected) {
+        newSocket.emit('visibility_change', {
+          roomCode: state.roomCode,
+          hidden: document.visibilityState === 'hidden'
+        });
+      }
     };
 
     const tryReconnectOnOnline = () => {

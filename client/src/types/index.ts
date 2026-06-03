@@ -79,6 +79,7 @@ export interface RoomPlayer {
   teamId: TeamId | null;
   isHost: boolean;
   isReady: boolean;
+  presenceStatus: 'active' | 'afk' | 'left' | 'never_joined';
 }
 
 export interface RoomState {
