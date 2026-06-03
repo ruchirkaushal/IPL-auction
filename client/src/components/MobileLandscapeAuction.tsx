@@ -130,16 +130,15 @@ export default function MobileLandscapeAuction({
           />
         </div>
 
-        {/* Bid controls — absolute overlay at the very bottom of video */}
-        {/* Overlaps video — visually connected, no empty space below */}
-        <div className="bottom-controls-area absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none">
+        {/* Bid controls — floating overlay on the right side, above the graphics */}
+        <div className="bottom-controls-area absolute right-3 bottom-24 z-30 flex flex-col items-end gap-2 pointer-events-none">
           {/* Leading team logo */}
-          <div className="w-10 h-10 flex items-center justify-center pointer-events-auto">
+          <div className="pointer-events-auto">
             {roomState.auction.phase === 'bidding' && highestBidderId && (
-              <div className="w-9 h-9 bg-[#001120]/90 border border-[#00e5ff] rounded-lg flex items-center justify-center shadow-[0_0_8px_rgba(0,229,255,0.3)]">
+              <div className="w-10 h-10 bg-[#001120]/90 border border-[#00e5ff] rounded-lg flex items-center justify-center shadow-[0_0_12px_rgba(0,229,255,0.4)] backdrop-blur-md">
                 <img
                   src={TEAMS[highestBidderId as keyof typeof TEAMS]?.logoUrl}
-                  className="w-[75%] h-[75%] object-contain"
+                  className="w-[75%] h-[75%] object-contain drop-shadow-md"
                   alt={highestBidderId}
                 />
               </div>
@@ -152,7 +151,7 @@ export default function MobileLandscapeAuction({
               highestBidderId === myTeamId ? (
                 <button
                   disabled
-                  className="bid-btn w-24 h-9 rounded-lg font-black text-[10px] tracking-widest uppercase transition-all bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                  className="bid-btn w-24 h-10 rounded-lg font-black text-[10px] tracking-widest uppercase transition-all bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.3)] backdrop-blur-md"
                 >
                   LEADING
                 </button>
@@ -166,10 +165,10 @@ export default function MobileLandscapeAuction({
                   }}
                   disabled={!canUserBid || isBidding}
                   className={`
-                    bid-btn w-24 h-9 rounded-lg font-black text-xs tracking-widest uppercase 
-                    transition-all active:scale-95 border
+                    bid-btn w-24 h-10 rounded-lg font-black text-sm tracking-widest uppercase 
+                    transition-all active:scale-95 border backdrop-blur-md
                     ${(canUserBid && !isBidding)
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(0,229,255,0.4)] border-[#00e5ff]'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_15px_rgba(0,229,255,0.5)] border-[#00e5ff]'
                       : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
                     }
                   `}
@@ -179,9 +178,6 @@ export default function MobileLandscapeAuction({
               )
             )}
           </div>
-
-          {/* Balance placeholder */}
-          <div className="w-10 h-10" />
         </div>
 
         {/* Pause Overlay */}
