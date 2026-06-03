@@ -130,9 +130,8 @@ export default function MobileLandscapeAuction({
           />
         </div>
 
-        {/* Bid controls — floating overlay on the right side, above the graphics */}
-        <div className="bottom-controls-area absolute right-3 bottom-24 z-30 flex flex-col items-end gap-2 pointer-events-none">
-          {/* Leading team logo */}
+        {/* Leading team logo — floating overlay on the left side, above the graphics */}
+        <div className="leading-team-logo-area absolute left-3 bottom-24 z-30 flex flex-col items-start gap-2 pointer-events-none">
           <div className="pointer-events-auto">
             {roomState.auction.phase === 'bidding' && highestBidderId && (
               <div className="w-10 h-10 bg-[#001120]/90 border border-[#00e5ff] rounded-lg flex items-center justify-center shadow-[0_0_12px_rgba(0,229,255,0.4)] backdrop-blur-md">
@@ -144,6 +143,10 @@ export default function MobileLandscapeAuction({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Bid controls — floating overlay on the right side, above the graphics */}
+        <div className="bottom-controls-area absolute right-3 bottom-24 z-30 flex flex-col items-end gap-2 pointer-events-none">
 
           {/* BID button */}
           <div className="z-30 pointer-events-auto">
