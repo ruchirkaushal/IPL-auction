@@ -5,11 +5,21 @@
 /* =========================================================
    0. VIEWPORT & LAYOUT FOUNDATION
    ========================================================= */
+/* Prevent scrolling on the body when in mobile landscape mode */
+body:has(.mobile-landscape-mode), html:has(.mobile-landscape-mode) {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
 /* Ensure no page scrolling - fit within viewport */
 .mobile-landscape-mode {
     min-height: 100dvh !important;
     height: 100dvh !important;
     overflow: hidden !important;
+    overscroll-behavior: none !important;
 }
 
 /* =========================================================
