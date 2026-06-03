@@ -257,7 +257,7 @@ body:has(.mobile-landscape-mode), html:has(.mobile-landscape-mode) {
 
 /* The sidebar is too wide */
 .mobile-landscape-mode .max-w-4xl .w-56 {
-    width: 140px !important;
+    width: 180px !important;
 }
 
 /* Modal header compression */
@@ -280,6 +280,7 @@ body:has(.mobile-landscape-mode), html:has(.mobile-landscape-mode) {
 /* Set items in sidebar */
 .mobile-landscape-mode .max-w-4xl .w-56 button {
     padding: 3px 4px !important;
+    gap: 6px !important;
 }
 .mobile-landscape-mode .max-w-4xl .w-56 .w-10 {
     width: 24px !important;
