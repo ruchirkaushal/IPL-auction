@@ -7,6 +7,7 @@ import {
   type AuctionSetCode,
   type SetCategory,
 } from '../constants/auctionSetClassifier';
+import { TEAMS } from '../constants/teams';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ function PlayerRow({
   isNext,
   isSold,
   soldAmount,
+  soldTeamId,
   isUnsold,
 }: {
   player: Player;
@@ -113,6 +115,7 @@ function PlayerRow({
   isNext: boolean;
   isSold: boolean;
   soldAmount?: number;
+  soldTeamId?: string;
   isUnsold: boolean;
 }) {
   const [imgErr, setImgErr] = useState(false);
@@ -191,10 +194,18 @@ function PlayerRow({
           </span>
         )}
         {isSold ? (
-          <>
-            <p className="text-emerald-400 font-black text-sm">{formatPrice(soldAmount!)}</p>
-            <p className="text-white/20 text-[8px]">SOLD</p>
-          </>
+          <div className="flex flex-col items-end gap-1">
+            {soldTeamId && TEAMS[soldTeamId as keyof typeof TEAMS]?.logoUrl ? (
+              <img 
+                src={TEAMS[soldTeamId as keyof typeof TEAMS].logoUrl} 
+                alt={TEAMS[soldTeamId as keyof typeof TEAMS].name || soldTeamId} 
+                className="h-5 w-auto object-contain opacity-90 drop-shadow-md"
+              />
+            ) : (
+              <p className="text-white/20 text-[8px] font-bold uppercase tracking-wider">SOLD</p>
+            )}
+            <p className="text-emerald-400 font-black text-sm drop-shadow-sm">{formatPrice(soldAmount!)}</p>
+          </div>
         ) : isUnsold ? (
           <p className="text-red-400/70 font-bold text-xs">UNSOLD</p>
         ) : (
@@ -303,8 +314,8 @@ export default function PlayerDatabase({
 
   // Status lookups
   const soldMap = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const s of soldPlayers) m[s.playerId] = s.amount;
+    const m: Record<string, { amount: number, teamId: string }> = {};
+    for (const s of soldPlayers) m[s.playerId] = { amount: s.amount, teamId: s.teamId };
     return m;
   }, [soldPlayers]);
 
@@ -503,7 +514,8 @@ export default function PlayerDatabase({
                     isCurrent={player.id === currentPlayerId}
                     isNext={player.id === nextPlayerId && player.id !== currentPlayerId}
                     isSold={player.id in soldMap}
-                    soldAmount={soldMap[player.id]}
+                    soldAmount={soldMap[player.id]?.amount}
+                    soldTeamId={soldMap[player.id]?.teamId}
                     isUnsold={unsoldSetIds.has(player.id)}
                   />
                 ))
