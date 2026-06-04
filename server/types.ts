@@ -40,9 +40,16 @@ export interface IntervalRecord {
   lastExecutedAt: number;
 }
 
+export interface AuctionTimerHandle {
+  reset(ticks: number): void;
+  pause(): void;
+  resume(): void;
+  destroy(): void;
+}
+
 export interface Room {
   state: RoomState;
-  timerInterval: NodeJS.Timeout | null;
+  auctionTimer: AuctionTimerHandle | null;
   autoAdvanceTimeout: NodeJS.Timeout | null;
   biddingStartTimeout: NodeJS.Timeout | null;
   aiTimeouts: NodeJS.Timeout[];

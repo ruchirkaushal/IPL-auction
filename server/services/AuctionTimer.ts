@@ -6,17 +6,19 @@ export class AuctionTimer extends EventEmitter {
   private currentTicks: number;
   private interval: NodeJS.Timeout | null = null;
   private paused = false;
+  private tickDurationMs: number;
 
-  constructor(initialTicks: number) {
+  constructor(initialTicks: number, tickDurationMs: number = 1000) {
     super();
     this.currentTicks = initialTicks;
+    this.tickDurationMs = tickDurationMs;
   }
 
   start() {
     if (this.interval) return;
     this.paused = false;
     this.emit('timer:resumed', { ticks: this.currentTicks });
-    this.interval = setInterval(() => this.tick(), 1000);
+    this.interval = setInterval(() => this.tick(), this.tickDurationMs);
   }
 
   private tick() {
@@ -66,12 +68,12 @@ export class AuctionTimer extends EventEmitter {
 export class TimerManager {
   private timers = new Map<string, AuctionTimer>();
 
-  createTimer(roomCode: string, initialTicks: number): AuctionTimer {
+  createTimer(roomCode: string, initialTicks: number, tickDurationMs: number = 1000): AuctionTimer {
     const existing = this.timers.get(roomCode);
     if (existing) {
       existing.destroy();
     }
-    const timer = new AuctionTimer(initialTicks);
+    const timer = new AuctionTimer(initialTicks, tickDurationMs);
     this.timers.set(roomCode, timer);
     return timer;
   }

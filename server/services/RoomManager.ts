@@ -8,6 +8,7 @@ import { Server, Socket } from 'socket.io';
 import {
   Room, RoomState, TeamState, RoomPlayer, AuctionState
 } from '../types';
+import type { RoomService } from './RoomService';
 import {
   ALL_TEAM_IDS, AUCTION_START_TICKS, SOCKET_RECOVERY_WINDOW_MS
 } from '../constants';
@@ -65,11 +66,11 @@ export const getRoomOrNotify = (socket: Socket, roomCode: string, source: string
 // ---------------------------------------------------------------------------
 
 export const clearAllTimers = (room: Room) => {
-  if (room.timerInterval) clearInterval(room.timerInterval);
+  if (room.auctionTimer) room.auctionTimer.destroy();
   if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
   if (room.biddingStartTimeout) clearTimeout(room.biddingStartTimeout);
   room.aiTimeouts.forEach(clearTimeout);
-  room.timerInterval = null;
+  room.auctionTimer = null;
   room.autoAdvanceTimeout = null;
   room.biddingStartTimeout = null;
   room.aiTimeouts = [];
@@ -152,7 +153,7 @@ export const makeInitialRoomState = (roomCode: string, hostSocketId: string, hos
 
 export const makeRoom = (state: RoomState): Room => ({
   state,
-  timerInterval: null,
+  auctionTimer: null,
   autoAdvanceTimeout: null,
   biddingStartTimeout: null,
   aiTimeouts: [],
@@ -183,7 +184,7 @@ export const startFreezeWatchdog = () => {
                   auction: state,
                   playersCount: room.state.players.length,
                   activePlayersCount: room.state.players.filter(p => p.socketId !== '').length,
-                  hasTimerInterval: room.timerInterval !== null,
+                  hasTimer: room.auctionTimer !== null,
                   hasAutoAdvance: room.autoAdvanceTimeout !== null,
                   hasBiddingStart: room.biddingStartTimeout !== null,
                   intervalRegistry: room.intervalRegistry,
@@ -213,7 +214,8 @@ export const startFreezeWatchdog = () => {
 
 export const makeHandleLeaveRoom = (
   io: Server,
-  emitState: (roomCode: string) => void
+  emitState: (roomCode: string) => void,
+  roomService: RoomService
 ) => {
   const handleLeaveRoom = (socketId: string, isDisconnect: boolean = false) => {
     try {
@@ -226,7 +228,13 @@ export const makeHandleLeaveRoom = (
         if (isDisconnect) {
           player.socketId = '';
           player.presenceStatus = 'left';
+          roomService.updatePlayerSession(roomCode, player.userId, 'disconnected').catch(err => {
+            console.warn('[RoomService] updatePlayerSession failed', err);
+          });
           emitState(roomCode);
+          roomService.saveRoom(room).catch(err => {
+            console.warn('[RoomService] saveRoom failed', err);
+          });
 
           const key = getReconnectKey(roomCode, player);
           const oldTimeout = reconnectTimeouts.get(key);
@@ -282,6 +290,9 @@ export const makeHandleLeaveRoom = (
             }
 
             emitState(roomCode);
+            currentRoom && roomService.saveRoom(currentRoom).catch(err => {
+              console.warn('[RoomService] saveRoom failed', err);
+            });
           }, 300000); // 5-min grace period
 
           reconnectTimeouts.set(key, timeout);
@@ -309,6 +320,9 @@ export const makeHandleLeaveRoom = (
           room.state.teams[player.teamId].ownerName = null;
         }
         room.state.players.splice(playerIndex, 1);
+        roomService.updatePlayerSession(roomCode, player.userId, 'left').catch(err => {
+          console.warn('[RoomService] updatePlayerSession failed', err);
+        });
 
         const clientSocket = io.sockets.sockets.get(socketId);
         if (clientSocket) clientSocket.leave(roomCode);
@@ -338,9 +352,15 @@ export const makeHandleLeaveRoom = (
           room.state.hostId = nextHost.socketId;
           console.log(`[Room] Host left room ${roomCode}, new host is ${nextHost.name}`);
           emitState(roomCode);
+          roomService.saveRoom(room).catch(err => {
+            console.warn('[RoomService] saveRoom failed', err);
+          });
         } else {
           console.log(`[Room] Player ${player.name} left room ${roomCode}`);
           emitState(roomCode);
+          roomService.saveRoom(room).catch(err => {
+            console.warn('[RoomService] saveRoom failed', err);
+          });
         }
       });
     } catch (err) {

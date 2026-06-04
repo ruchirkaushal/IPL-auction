@@ -3,6 +3,7 @@ export interface PendingSocketEvent {
   event: string;
   payload: any;
   receivedAt: number;
+  handler: () => Promise<void> | void;
 }
 
 export class SocketEventQueue {
@@ -11,7 +12,7 @@ export class SocketEventQueue {
 
   enqueue(event: PendingSocketEvent) {
     this.queue.push(event);
-    this.processNext();
+    void this.processNext();
   }
 
   private async processNext() {
@@ -19,11 +20,15 @@ export class SocketEventQueue {
     this.isProcessing = true;
     const event = this.queue.shift();
     if (event) {
-      await Promise.resolve();
+      try {
+        await Promise.resolve(event.handler());
+      } catch (err) {
+        console.error('[SocketEventQueue] handler failed for', event.event, err);
+      }
     }
     this.isProcessing = false;
     if (this.queue.length > 0) {
-      this.processNext();
+      void this.processNext();
     }
   }
 

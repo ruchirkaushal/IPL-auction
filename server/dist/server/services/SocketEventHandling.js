@@ -8,7 +8,7 @@ class SocketEventQueue {
     }
     enqueue(event) {
         this.queue.push(event);
-        this.processNext();
+        void this.processNext();
     }
     async processNext() {
         if (this.isProcessing || this.queue.length === 0)
@@ -16,11 +16,16 @@ class SocketEventQueue {
         this.isProcessing = true;
         const event = this.queue.shift();
         if (event) {
-            await Promise.resolve();
+            try {
+                await Promise.resolve(event.handler());
+            }
+            catch (err) {
+                console.error('[SocketEventQueue] handler failed for', event.event, err);
+            }
         }
         this.isProcessing = false;
         if (this.queue.length > 0) {
-            this.processNext();
+            void this.processNext();
         }
     }
     flush() {

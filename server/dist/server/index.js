@@ -56,15 +56,39 @@ io.engine.on('connection_error', (err) => {
     console.error('[Socket.IO connection_error]', { code: err.code, message: err.message, context: err.context });
 });
 // Bind io to services
-const emit = (roomCode) => (0, RoomManager_1.emitRoomState)(roomCode, AuctionEngine_1.getAuthoritativeNextBid);
-(0, RoomManager_1.initRoomManager)(io);
-(0, AuctionEngine_1.initAuctionEngine)(io, emit);
-(0, RoomManager_1.startFreezeWatchdog)();
 const roomService = new RoomService_1.RoomService();
 const timerManager = new AuctionTimer_1.TimerManager();
 const redisService = new RedisService_1.RedisService();
 const socketEventQueue = new SocketEventHandling_1.SocketEventQueue();
 const rateLimiter = new SocketEventHandling_1.RateLimiter(120, 60000);
+void (async () => {
+    try {
+        const restoredRooms = await roomService.loadAllRooms();
+        restoredRooms.forEach((state, roomCode) => {
+            const restoredRoom = (0, RoomManager_1.makeRoom)(state);
+            RoomManager_1.rooms.set(roomCode, restoredRoom);
+            console.log(`[Phase 3] Restored persisted room ${roomCode} from RoomService`);
+        });
+    }
+    catch (err) {
+        console.warn('[Phase 3] Failed to restore persisted rooms', err);
+    }
+})();
+const emit = (roomCode) => {
+    (0, RoomManager_1.emitRoomState)(roomCode, AuctionEngine_1.getAuthoritativeNextBid);
+    const room = RoomManager_1.rooms.get(roomCode);
+    if (room) {
+        redisService.cacheRoom(roomCode, room.state).catch(err => {
+            console.warn('[RedisService] cacheRoom failed', err);
+        });
+        redisService.publishRoomState(roomCode, room.state).catch(err => {
+            console.warn('[RedisService] publishRoomState failed', err);
+        });
+    }
+};
+(0, RoomManager_1.initRoomManager)(io);
+(0, AuctionEngine_1.initAuctionEngine)(io, emit, timerManager);
+(0, RoomManager_1.startFreezeWatchdog)();
 // Expose basic service health for Phase 3 readiness
 redisService.healthCheck().then(() => {
     console.log('[Phase 3] RedisService is ready');
@@ -77,11 +101,13 @@ redisService.healthCheck().then(() => {
 app.get('/api/players', (_req, res) => {
     res.json(constants_1.PLAYERS);
 });
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+    const redisHealth = await redisService.healthCheck().catch(err => ({ status: 'unhealthy', error: String(err) }));
     res.json({
         status: 'ok',
         uptime: process.uptime(),
         activeRooms: RoomManager_1.rooms.size,
+        redisHealth,
         timestamp: new Date().toISOString()
     });
 });
@@ -92,7 +118,7 @@ console.log(`Loaded ${constants_1.PLAYERS.length} players from the IPL database`
 // ---------------------------------------------------------------------------
 // Socket event handlers
 // ---------------------------------------------------------------------------
-const handleLeaveRoom = (0, RoomManager_1.makeHandleLeaveRoom)(io, emit);
+const handleLeaveRoom = (0, RoomManager_1.makeHandleLeaveRoom)(io, emit, roomService);
 io.on('connection', (socket) => {
     socket.use((packet, next) => {
         const eventName = packet[0];
@@ -102,8 +128,19 @@ io.on('connection', (socket) => {
         }
         next();
     });
+    const enqueueSocketHandler = (eventName, handler) => {
+        socket.on(eventName, (payload) => {
+            socketEventQueue.enqueue({
+                socketId: socket.id,
+                event: eventName,
+                payload,
+                receivedAt: Date.now(),
+                handler: () => Promise.resolve(handler(payload))
+            });
+        });
+    };
     // -- create_room --
-    socket.on('create_room', ({ playerName, userId }) => {
+    enqueueSocketHandler('create_room', async ({ playerName, userId }) => {
         try {
             const roomCode = (0, RoomManager_1.generateRoomCode)();
             const roomState = (0, RoomManager_1.makeInitialRoomState)(roomCode, socket.id, userId, playerName);
@@ -115,6 +152,7 @@ io.on('connection', (socket) => {
             socket.emit('room_created', { roomCode });
             console.log(`[DIAGNOSTICS: ROOM] Created room ${roomCode} for ${playerName} (${userId})`);
             emit(roomCode);
+            roomService.updatePlayerSession(roomCode, userId, 'connected').catch(err => console.warn('[RoomService] updatePlayerSession failed', err));
             roomService.saveRoom(newRoom).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
@@ -122,9 +160,18 @@ io.on('connection', (socket) => {
         }
     });
     // -- join_room --
-    socket.on('join_room', ({ roomCode, playerName, userId }) => {
+    enqueueSocketHandler('join_room', async ({ roomCode, playerName, userId }) => {
         try {
-            const room = RoomManager_1.rooms.get(roomCode);
+            let room = RoomManager_1.rooms.get(roomCode);
+            if (!room) {
+                const persistedState = await roomService.loadRoom(roomCode);
+                if (persistedState) {
+                    const restoredRoom = (0, RoomManager_1.makeRoom)(persistedState);
+                    RoomManager_1.rooms.set(roomCode, restoredRoom);
+                    room = restoredRoom;
+                    console.log(`[Room] Restored persisted room ${roomCode} for join attempt by ${playerName}`);
+                }
+            }
             if (!room) {
                 (0, RoomManager_1.emitRoomUnavailable)(socket, roomCode, 'join_room');
                 socket.emit('error', { message: 'Room not found' });
@@ -174,6 +221,7 @@ io.on('connection', (socket) => {
             socket.join(roomCode);
             socket.emit('room_joined', { roomCode });
             emit(roomCode);
+            roomService.updatePlayerSession(roomCode, userId, 'connected').catch(err => console.warn('[RoomService] updatePlayerSession failed', err));
             roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
@@ -181,7 +229,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- select_team --
-    socket.on('select_team', ({ roomCode, teamId }) => {
+    enqueueSocketHandler('select_team', async ({ roomCode, teamId }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'select_team');
             if (!room)
@@ -210,7 +258,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- start_auction --
-    socket.on('start_auction', ({ roomCode }) => {
+    enqueueSocketHandler('start_auction', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'start_auction');
             if (!room)
@@ -259,7 +307,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- place_bid --
-    socket.on('place_bid', ({ roomCode }) => {
+    enqueueSocketHandler('place_bid', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'place_bid');
             if (!room)
@@ -288,7 +336,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- pass_bid --
-    socket.on('pass_bid', ({ roomCode }) => {
+    enqueueSocketHandler('pass_bid', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'pass_bid');
             if (!room)
@@ -314,7 +362,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- reset_room --
-    socket.on('reset_room', ({ roomCode }) => {
+    enqueueSocketHandler('reset_room', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'reset_room');
             if (!room || room.state.hostId !== socket.id)
@@ -344,7 +392,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- send_chat --
-    socket.on('send_chat', ({ roomCode, text }) => {
+    enqueueSocketHandler('send_chat', async ({ roomCode, text }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'send_chat');
             if (!room)
@@ -361,7 +409,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- toggle_pause --
-    socket.on('toggle_pause', ({ roomCode }) => {
+    enqueueSocketHandler('toggle_pause', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'toggle_pause');
             if (!room)
@@ -399,7 +447,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- end_auction --
-    socket.on('end_auction', ({ roomCode }) => {
+    enqueueSocketHandler('end_auction', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'end_auction');
             if (!room || room.state.hostId !== socket.id)
@@ -416,11 +464,11 @@ io.on('connection', (socket) => {
         }
     });
     // -- leave_room --
-    socket.on('leave_room', () => {
+    enqueueSocketHandler('leave_room', async () => {
         handleLeaveRoom(socket.id, false);
     });
     // -- kick_player --
-    socket.on('kick_player', ({ roomCode, targetSocketId }) => {
+    enqueueSocketHandler('kick_player', async ({ roomCode, targetSocketId }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'kick_player');
             if (!room || room.state.hostId !== socket.id)
@@ -445,7 +493,7 @@ io.on('connection', (socket) => {
         }
     });
     // -- visibility_change (AFK tracking) --
-    socket.on('visibility_change', ({ roomCode, hidden }) => {
+    enqueueSocketHandler('visibility_change', async ({ roomCode, hidden }) => {
         try {
             const room = RoomManager_1.rooms.get(roomCode);
             if (!room)
@@ -465,7 +513,7 @@ io.on('connection', (socket) => {
         handleLeaveRoom(socket.id, true);
     });
     // -- request_room_state --
-    socket.on('request_room_state', ({ roomCode }) => {
+    enqueueSocketHandler('request_room_state', async ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'request_room_state');
             if (!room)

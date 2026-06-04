@@ -81,16 +81,40 @@ io.engine.on('connection_error', (err) => {
 });
 
 // Bind io to services
-const emit = (roomCode: string) => emitRoomState(roomCode, getAuthoritativeNextBid);
-initRoomManager(io);
-initAuctionEngine(io, emit);
-startFreezeWatchdog();
-
 const roomService = new RoomService();
 const timerManager = new TimerManager();
 const redisService = new RedisService();
 const socketEventQueue = new SocketEventQueue();
 const rateLimiter = new RateLimiter(120, 60000);
+
+void (async () => {
+  try {
+    const restoredRooms = await roomService.loadAllRooms();
+    restoredRooms.forEach((state, roomCode) => {
+      const restoredRoom = makeRoom(state);
+      rooms.set(roomCode, restoredRoom);
+      console.log(`[Phase 3] Restored persisted room ${roomCode} from RoomService`);
+    });
+  } catch (err) {
+    console.warn('[Phase 3] Failed to restore persisted rooms', err);
+  }
+})();
+
+const emit = (roomCode: string) => {
+  emitRoomState(roomCode, getAuthoritativeNextBid);
+  const room = rooms.get(roomCode);
+  if (room) {
+    redisService.cacheRoom(roomCode, room.state).catch(err => {
+      console.warn('[RedisService] cacheRoom failed', err);
+    });
+    redisService.publishRoomState(roomCode, room.state).catch(err => {
+      console.warn('[RedisService] publishRoomState failed', err);
+    });
+  }
+};
+initRoomManager(io);
+initAuctionEngine(io, emit, timerManager);
+startFreezeWatchdog();
 
 // Expose basic service health for Phase 3 readiness
 redisService.healthCheck().then(() => {
@@ -107,11 +131,13 @@ app.get('/api/players', (_req, res) => {
   res.json(PLAYERS);
 });
 
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+  const redisHealth = await redisService.healthCheck().catch(err => ({ status: 'unhealthy', error: String(err) }));
   res.json({
     status: 'ok',
     uptime: process.uptime(),
     activeRooms: rooms.size,
+    redisHealth,
     timestamp: new Date().toISOString()
   });
 });
@@ -126,7 +152,7 @@ console.log(`Loaded ${PLAYERS.length} players from the IPL database`);
 // Socket event handlers
 // ---------------------------------------------------------------------------
 
-const handleLeaveRoom = makeHandleLeaveRoom(io, emit);
+const handleLeaveRoom = makeHandleLeaveRoom(io, emit, roomService);
 
 io.on('connection', (socket: Socket) => {
   socket.use((packet, next) => {
@@ -138,8 +164,20 @@ io.on('connection', (socket: Socket) => {
     next();
   });
 
+  const enqueueSocketHandler = <T>(eventName: string, handler: (payload: T) => void | Promise<void>) => {
+    socket.on(eventName, (payload: T) => {
+      socketEventQueue.enqueue({
+        socketId: socket.id,
+        event: eventName,
+        payload,
+        receivedAt: Date.now(),
+        handler: () => Promise.resolve(handler(payload))
+      });
+    });
+  };
+
   // -- create_room --
-  socket.on('create_room', ({ playerName, userId }: { playerName: string, userId: string }) => {
+  enqueueSocketHandler('create_room', async ({ playerName, userId }: { playerName: string, userId: string }) => {
     try {
       const roomCode = generateRoomCode();
       const roomState = makeInitialRoomState(roomCode, socket.id, userId, playerName);
@@ -151,14 +189,25 @@ io.on('connection', (socket: Socket) => {
       socket.emit('room_created', { roomCode });
       console.log(`[DIAGNOSTICS: ROOM] Created room ${roomCode} for ${playerName} (${userId})`);
       emit(roomCode);
+      roomService.updatePlayerSession(roomCode, userId, 'connected').catch(err => console.warn('[RoomService] updatePlayerSession failed', err));
       roomService.saveRoom(newRoom).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(create_room) failed:`, err); }
   });
 
   // -- join_room --
-  socket.on('join_room', ({ roomCode, playerName, userId }: { roomCode: string, playerName: string, userId: string }) => {
+  enqueueSocketHandler('join_room', async ({ roomCode, playerName, userId }: { roomCode: string, playerName: string, userId: string }) => {
     try {
-      const room = rooms.get(roomCode);
+      let room = rooms.get(roomCode);
+      if (!room) {
+        const persistedState = await roomService.loadRoom(roomCode);
+        if (persistedState) {
+          const restoredRoom = makeRoom(persistedState);
+          rooms.set(roomCode, restoredRoom);
+          room = restoredRoom;
+          console.log(`[Room] Restored persisted room ${roomCode} for join attempt by ${playerName}`);
+        }
+      }
+
       if (!room) {
         emitRoomUnavailable(socket, roomCode, 'join_room');
         socket.emit('error', { message: 'Room not found' });
@@ -211,12 +260,13 @@ io.on('connection', (socket: Socket) => {
       socket.join(roomCode);
       socket.emit('room_joined', { roomCode });
       emit(roomCode);
+      roomService.updatePlayerSession(roomCode, userId, 'connected').catch(err => console.warn('[RoomService] updatePlayerSession failed', err));
       roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(join_room) failed:`, err); }
   });
 
   // -- select_team --
-  socket.on('select_team', ({ roomCode, teamId }: { roomCode: string, teamId: TeamId }) => {
+  enqueueSocketHandler('select_team', async ({ roomCode, teamId }: { roomCode: string, teamId: TeamId }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'select_team');
       if (!room) return;
@@ -241,7 +291,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- start_auction --
-  socket.on('start_auction', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('start_auction', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'start_auction');
       if (!room) return;
@@ -290,7 +340,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- place_bid --
-  socket.on('place_bid', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('place_bid', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'place_bid');
       if (!room) return;
@@ -316,7 +366,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- pass_bid --
-  socket.on('pass_bid', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('pass_bid', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'pass_bid');
       if (!room) return;
@@ -339,7 +389,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- reset_room --
-  socket.on('reset_room', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('reset_room', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'reset_room');
       if (!room || room.state.hostId !== socket.id) return;
@@ -366,7 +416,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- send_chat --
-  socket.on('send_chat', ({ roomCode, text }: { roomCode: string, text: string }) => {
+  enqueueSocketHandler('send_chat', async ({ roomCode, text }: { roomCode: string, text: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'send_chat');
       if (!room) return;
@@ -379,7 +429,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- toggle_pause --
-  socket.on('toggle_pause', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('toggle_pause', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'toggle_pause');
       if (!room) return;
@@ -414,7 +464,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- end_auction --
-  socket.on('end_auction', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('end_auction', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'end_auction');
       if (!room || room.state.hostId !== socket.id) return;
@@ -428,12 +478,12 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- leave_room --
-  socket.on('leave_room', () => {
+  enqueueSocketHandler('leave_room', async () => {
     handleLeaveRoom(socket.id, false);
   });
 
   // -- kick_player --
-  socket.on('kick_player', ({ roomCode, targetSocketId }: { roomCode: string, targetSocketId: string }) => {
+  enqueueSocketHandler('kick_player', async ({ roomCode, targetSocketId }: { roomCode: string, targetSocketId: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'kick_player');
       if (!room || room.state.hostId !== socket.id) return;
@@ -454,7 +504,7 @@ io.on('connection', (socket: Socket) => {
   });
 
   // -- visibility_change (AFK tracking) --
-  socket.on('visibility_change', ({ roomCode, hidden }: { roomCode: string; hidden: boolean }) => {
+  enqueueSocketHandler('visibility_change', async ({ roomCode, hidden }: { roomCode: string; hidden: boolean }) => {
     try {
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -472,7 +522,7 @@ io.on('connection', (socket: Socket) => {
 
 
   // -- request_room_state --
-  socket.on('request_room_state', ({ roomCode }: { roomCode: string }) => {
+  enqueueSocketHandler('request_room_state', async ({ roomCode }: { roomCode: string }) => {
     try {
       const room = getRoomOrNotify(socket, roomCode, 'request_room_state');
       if (!room) return;

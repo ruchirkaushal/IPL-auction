@@ -12,6 +12,14 @@ export class RoomService extends EventEmitter {
     return null;
   }
 
+  async loadAllRooms(): Promise<Map<string, RoomState>> {
+    const snapshot = new Map<string, RoomState>();
+    this.persistenceCache.forEach((state, roomCode) => {
+      snapshot.set(roomCode, JSON.parse(JSON.stringify(state)));
+    });
+    return snapshot;
+  }
+
   async saveRoom(room: Room): Promise<void> {
     this.persistenceCache.set(room.state.roomCode, JSON.parse(JSON.stringify(room.state)));
     await this.recordEvent(room, 'room_saved', { players: room.state.players.length });

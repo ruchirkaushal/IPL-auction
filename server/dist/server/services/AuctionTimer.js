@@ -3,18 +3,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TimerManager = exports.AuctionTimer = void 0;
 const events_1 = require("events");
 class AuctionTimer extends events_1.EventEmitter {
-    constructor(initialTicks) {
+    constructor(initialTicks, tickDurationMs = 1000) {
         super();
         this.interval = null;
         this.paused = false;
         this.currentTicks = initialTicks;
+        this.tickDurationMs = tickDurationMs;
     }
     start() {
         if (this.interval)
             return;
         this.paused = false;
         this.emit('timer:resumed', { ticks: this.currentTicks });
-        this.interval = setInterval(() => this.tick(), 1000);
+        this.interval = setInterval(() => this.tick(), this.tickDurationMs);
     }
     tick() {
         if (this.paused || this.currentTicks <= 0)
@@ -62,12 +63,12 @@ class TimerManager {
     constructor() {
         this.timers = new Map();
     }
-    createTimer(roomCode, initialTicks) {
+    createTimer(roomCode, initialTicks, tickDurationMs = 1000) {
         const existing = this.timers.get(roomCode);
         if (existing) {
             existing.destroy();
         }
-        const timer = new AuctionTimer(initialTicks);
+        const timer = new AuctionTimer(initialTicks, tickDurationMs);
         this.timers.set(roomCode, timer);
         return timer;
     }

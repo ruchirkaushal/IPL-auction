@@ -52,14 +52,14 @@ exports.getRoomOrNotify = getRoomOrNotify;
 // Timer cleanup
 // ---------------------------------------------------------------------------
 const clearAllTimers = (room) => {
-    if (room.timerInterval)
-        clearInterval(room.timerInterval);
+    if (room.auctionTimer)
+        room.auctionTimer.destroy();
     if (room.autoAdvanceTimeout)
         clearTimeout(room.autoAdvanceTimeout);
     if (room.biddingStartTimeout)
         clearTimeout(room.biddingStartTimeout);
     room.aiTimeouts.forEach(clearTimeout);
-    room.timerInterval = null;
+    room.auctionTimer = null;
     room.autoAdvanceTimeout = null;
     room.biddingStartTimeout = null;
     room.aiTimeouts = [];
@@ -139,7 +139,7 @@ const makeInitialRoomState = (roomCode, hostSocketId, hostUserId, hostName) => {
 exports.makeInitialRoomState = makeInitialRoomState;
 const makeRoom = (state) => ({
     state,
-    timerInterval: null,
+    auctionTimer: null,
     autoAdvanceTimeout: null,
     biddingStartTimeout: null,
     aiTimeouts: [],
@@ -168,7 +168,7 @@ const startFreezeWatchdog = () => {
                                     auction: state,
                                     playersCount: room.state.players.length,
                                     activePlayersCount: room.state.players.filter(p => p.socketId !== '').length,
-                                    hasTimerInterval: room.timerInterval !== null,
+                                    hasTimer: room.auctionTimer !== null,
                                     hasAutoAdvance: room.autoAdvanceTimeout !== null,
                                     hasBiddingStart: room.biddingStartTimeout !== null,
                                     intervalRegistry: room.intervalRegistry,
@@ -199,7 +199,7 @@ exports.startFreezeWatchdog = startFreezeWatchdog;
 // ---------------------------------------------------------------------------
 // handleLeaveRoom
 // ---------------------------------------------------------------------------
-const makeHandleLeaveRoom = (io, emitState) => {
+const makeHandleLeaveRoom = (io, emitState, roomService) => {
     const handleLeaveRoom = (socketId, isDisconnect = false) => {
         try {
             exports.rooms.forEach((room, roomCode) => {
@@ -210,7 +210,13 @@ const makeHandleLeaveRoom = (io, emitState) => {
                 if (isDisconnect) {
                     player.socketId = '';
                     player.presenceStatus = 'left';
+                    roomService.updatePlayerSession(roomCode, player.userId, 'disconnected').catch(err => {
+                        console.warn('[RoomService] updatePlayerSession failed', err);
+                    });
                     emitState(roomCode);
+                    roomService.saveRoom(room).catch(err => {
+                        console.warn('[RoomService] saveRoom failed', err);
+                    });
                     const key = (0, exports.getReconnectKey)(roomCode, player);
                     const oldTimeout = exports.reconnectTimeouts.get(key);
                     if (oldTimeout)
@@ -259,6 +265,9 @@ const makeHandleLeaveRoom = (io, emitState) => {
                             }, 3600000);
                         }
                         emitState(roomCode);
+                        currentRoom && roomService.saveRoom(currentRoom).catch(err => {
+                            console.warn('[RoomService] saveRoom failed', err);
+                        });
                     }, 300000); // 5-min grace period
                     exports.reconnectTimeouts.set(key, timeout);
                     return;
@@ -286,6 +295,9 @@ const makeHandleLeaveRoom = (io, emitState) => {
                     room.state.teams[player.teamId].ownerName = null;
                 }
                 room.state.players.splice(playerIndex, 1);
+                roomService.updatePlayerSession(roomCode, player.userId, 'left').catch(err => {
+                    console.warn('[RoomService] updatePlayerSession failed', err);
+                });
                 const clientSocket = io.sockets.sockets.get(socketId);
                 if (clientSocket)
                     clientSocket.leave(roomCode);
@@ -317,10 +329,16 @@ const makeHandleLeaveRoom = (io, emitState) => {
                     room.state.hostId = nextHost.socketId;
                     console.log(`[Room] Host left room ${roomCode}, new host is ${nextHost.name}`);
                     emitState(roomCode);
+                    roomService.saveRoom(room).catch(err => {
+                        console.warn('[RoomService] saveRoom failed', err);
+                    });
                 }
                 else {
                     console.log(`[Room] Player ${player.name} left room ${roomCode}`);
                     emitState(roomCode);
+                    roomService.saveRoom(room).catch(err => {
+                        console.warn('[RoomService] saveRoom failed', err);
+                    });
                 }
             });
         }

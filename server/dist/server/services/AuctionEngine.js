@@ -18,9 +18,11 @@ const RoomManager_1 = require("./RoomManager");
 // ---------------------------------------------------------------------------
 let _io;
 let _emitState;
-const initAuctionEngine = (io, emitState) => {
+let _timerManager;
+const initAuctionEngine = (io, emitState, timerManager) => {
     _io = io;
     _emitState = emitState;
+    _timerManager = timerManager;
 };
 exports.initAuctionEngine = initAuctionEngine;
 // ---------------------------------------------------------------------------
@@ -161,6 +163,7 @@ const placeBid = (room, teamId, isAI = false) => {
         });
         team.status = 'leading';
         state.auction.ticks = constants_1.AUCTION_START_TICKS;
+        room.auctionTimer?.reset(state.auction.ticks);
         state.auction.nextBidAmount = (0, exports.getAuthoritativeNextBid)(state);
         _io.to(state.roomCode).emit('bid_placed', { teamId, teamName: teamId, amount: normalizedAmount, isAI });
         (0, exports.addChatMessage)(room, { type: 'system_bid', teamId, playerName: player.name, amount: normalizedAmount });
@@ -329,7 +332,7 @@ exports.advanceToNextPlayer = advanceToNextPlayer;
 const startTimer = (room) => {
     if (room.state.auction.isPaused)
         return;
-    if (room.timerInterval)
+    if (room.auctionTimer)
         return;
     if (room.state.auction.isAdvancing)
         return;
@@ -345,39 +348,24 @@ const startTimer = (room) => {
     console.log(`[DIAGNOSTICS: TIMER] Starting timer for room ${roomCode}`);
     (0, Telemetry_1.logAuctionEvent)(room, 'timer_started');
     (0, Telemetry_1.registerInterval)(room, 'timerInterval', 'main_auction_timer');
-    room.timerInterval = setInterval(() => {
+    const timer = _timerManager.createTimer(roomCode, room.state.auction.ticks, constants_1.AUCTION_TIMER_TICK_MS);
+    room.auctionTimer = timer;
+    const disposeTimer = () => {
+        if (room.auctionTimer) {
+            room.auctionTimer.destroy();
+            room.auctionTimer = null;
+        }
+        (0, Telemetry_1.unregisterInterval)(room, 'timerInterval');
+    };
+    timer.on('timer:tick', ({ ticks }) => {
         try {
             const currentRoom = RoomManager_1.rooms.get(roomCode);
             if (!currentRoom || currentRoom.roomGeneration !== capturedGeneration) {
-                console.log(`[Timer] Room ${roomCode} is stale (deleted or recreated). Killing interval.`);
-                if (room.timerInterval) {
-                    clearInterval(room.timerInterval);
-                    room.timerInterval = null;
-                    (0, Telemetry_1.unregisterInterval)(room, 'timerInterval');
-                }
+                console.log(`[Timer] Room ${roomCode} is stale (deleted or recreated). Killing timer.`);
+                disposeTimer();
                 return;
             }
-            (0, Telemetry_1.markIntervalExecuted)(currentRoom, 'timerInterval');
-            if (currentRoom.state.auction.isPaused || currentRoom.state.auction.phase !== 'bidding') {
-                if (currentRoom.timerInterval)
-                    clearInterval(currentRoom.timerInterval);
-                currentRoom.timerInterval = null;
-                (0, Telemetry_1.unregisterInterval)(currentRoom, 'timerInterval');
-                (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_stopped_non_bidding_or_paused');
-                return;
-            }
-            if (currentRoom.state.auction.currentPlayerIndex >= currentRoom.state.auction.auctionQueue.length) {
-                if (currentRoom.timerInterval)
-                    clearInterval(currentRoom.timerInterval);
-                currentRoom.timerInterval = null;
-                (0, Telemetry_1.unregisterInterval)(currentRoom, 'timerInterval');
-                const socketsInRoom = _io.sockets.adapter.rooms.get(roomCode);
-                console.log(`[Timer] Queue complete. Emitting auction_complete to ${socketsInRoom?.size || 0} clients in ${roomCode}.`);
-                _io.to(roomCode).emit('auction_complete', currentRoom.state);
-                (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_stopped_queue_complete');
-                return;
-            }
-            currentRoom.state.auction.ticks -= 1;
+            currentRoom.state.auction.ticks = ticks;
             if (!Number.isFinite(currentRoom.state.auction.ticks)) {
                 currentRoom.state.auction.ticks = constants_1.AUCTION_START_TICKS;
             }
@@ -388,27 +376,36 @@ const startTimer = (room) => {
             if (currentRoom.state.auction.ticks > 0 && currentRoom.state.auction.ticks % 10 === 0) {
                 (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_tick_second', { ticks: currentRoom.state.auction.ticks });
             }
-            if (currentRoom.state.auction.ticks <= 0) {
-                if (currentRoom.timerInterval)
-                    clearInterval(currentRoom.timerInterval);
-                currentRoom.timerInterval = null;
-                if (currentRoom.state.auction.isAdvancing) {
-                    (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_expired_but_already_advancing');
-                    return;
-                }
-                currentRoom.state.auction.isAdvancing = true;
-                (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_expired_resolving_player');
-                (0, exports.resolveCurrentPlayer)(currentRoom);
-            }
         }
         catch (tickError) {
-            console.error(`[DIAGNOSTICS: ERROR] Timer loop failure for room ${roomCode}:`, tickError);
-            const errorRoom = RoomManager_1.rooms.get(roomCode);
-            if (errorRoom && errorRoom.timerInterval) {
-                clearInterval(errorRoom.timerInterval);
-                errorRoom.timerInterval = null;
-            }
+            console.error(`[DIAGNOSTICS: ERROR] Timer tick failure for room ${roomCode}:`, tickError);
+            disposeTimer();
         }
-    }, constants_1.AUCTION_TIMER_TICK_MS);
+    });
+    timer.on('timer:expired', () => {
+        try {
+            const currentRoom = RoomManager_1.rooms.get(roomCode);
+            if (!currentRoom || currentRoom.roomGeneration !== capturedGeneration) {
+                disposeTimer();
+                return;
+            }
+            currentRoom.auctionTimer = null;
+            if (currentRoom.state.auction.isPaused || currentRoom.state.auction.phase !== 'bidding') {
+                (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_expired_ignored_non_bidding');
+                return;
+            }
+            if (currentRoom.state.auction.isAdvancing) {
+                (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_expired_but_already_advancing');
+                return;
+            }
+            currentRoom.state.auction.isAdvancing = true;
+            (0, Telemetry_1.logAuctionEvent)(currentRoom, 'timer_expired_resolving_player');
+            (0, exports.resolveCurrentPlayer)(currentRoom);
+        }
+        catch (tickError) {
+            console.error(`[DIAGNOSTICS: ERROR] Timer expiration handler failed for room ${roomCode}:`, tickError);
+        }
+    });
+    timer.start();
 };
 exports.startTimer = startTimer;
