@@ -248,6 +248,18 @@ const makeHandleLeaveRoom = (io, emitState, roomService) => {
                             }
                             currentRoom.state.players.splice(currentPlayerIndex, 1);
                         }
+                        else {
+                            if (currentPlayer.teamId) {
+                                const releasedTeamId = currentPlayer.teamId;
+                                console.log(`[Room] Reconnect window expired for ${currentPlayer.name} in room ${roomCode}; releasing team ${releasedTeamId}`);
+                                currentRoom.state.teams[releasedTeamId].ownerId = null;
+                                currentRoom.state.teams[releasedTeamId].ownerName = null;
+                                currentRoom.state.teams[releasedTeamId].status = 'idle';
+                                currentPlayer.teamId = null;
+                                currentPlayer.role = 'spectator';
+                                currentPlayer.isReady = false;
+                            }
+                        }
                         const remainingActive = currentRoom.state.players.filter(p => p.socketId !== '');
                         if (remainingActive.length === 0) {
                             if (currentRoom.deletionTimeout)

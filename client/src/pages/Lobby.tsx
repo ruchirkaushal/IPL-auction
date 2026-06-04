@@ -63,6 +63,11 @@ export default function Lobby() {
   const managers = roomState.players.filter(p => p.role === 'manager');
   const spectators = roomState.players.filter(p => p.role === 'spectator');
   const allReady = managers.length > 0 && managers.every(p => p.isReady && p.teamId !== null);
+  const availableTeams = ALL_TEAM_IDS.filter(teamId => roomState.teams[teamId].ownerId === null);
+  const reservedTeams = ALL_TEAM_IDS.filter(teamId => {
+    const owner = roomState.players.find(p => p.teamId === teamId);
+    return roomState.teams[teamId].ownerId !== null && owner?.socketId === '';
+  });
 
   if (isPhone && isPortrait) {
     return <RotateDeviceOverlay />;
@@ -114,6 +119,16 @@ export default function Lobby() {
                <h3 className="text-base font-black tracking-tight">Managers <span className="text-gray-500 ml-1">({managers.length}/10)</span></h3>
                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
             </div>
+            <div className="hidden md:grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
+                <div className="text-[9px] uppercase tracking-[0.3em] text-gray-500">Available Teams</div>
+                <div className="text-xl font-black text-white">{availableTeams.length}</div>
+              </div>
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
+                <div className="text-[9px] uppercase tracking-[0.3em] text-gray-500">Reserved Teams</div>
+                <div className="text-xl font-black text-white">{reservedTeams.length}</div>
+              </div>
+            </div>
             
             {/* Mobile Stats Bar */}
             <div className="md:hidden flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
@@ -130,6 +145,16 @@ export default function Lobby() {
               <div className="flex flex-col items-center">
                 <span className="text-[8px] font-black uppercase text-gray-500 tracking-widest">Room Status</span>
                 <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> WAITING</span>
+              </div>
+            </div>
+            <div className="md:hidden grid grid-cols-2 gap-3 mt-3">
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
+                <div className="text-[8px] uppercase tracking-[0.3em] text-gray-500">Available</div>
+                <div className="text-lg font-black text-white">{availableTeams.length}</div>
+              </div>
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-center">
+                <div className="text-[8px] uppercase tracking-[0.3em] text-gray-500">Reserved</div>
+                <div className="text-lg font-black text-white">{reservedTeams.length}</div>
               </div>
             </div>
 
@@ -211,7 +236,9 @@ export default function Lobby() {
               {ALL_TEAM_IDS.map((teamId: TeamId) => {
                 const team = TEAMS[teamId];
                 const teamState = roomState.teams[teamId];
+                const ownerPlayer = roomState.players.find(p => p.teamId === teamId);
                 const isTaken = teamState.ownerId !== null;
+                const isReserved = isTaken && ownerPlayer?.socketId === '';
                 const isMine = myTeamId === teamId;
                 
                 return (
@@ -241,6 +268,10 @@ export default function Lobby() {
                         {isMine ? (
                           <span className="text-[8px] font-black uppercase tracking-widest text-blue-400 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">
                             YOU (MANAGER)
+                          </span>
+                        ) : isReserved ? (
+                          <span className="text-[8px] font-black uppercase tracking-widest text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                            RESERVED
                           </span>
                         ) : isTaken ? (
                           <span className="text-[8px] font-black uppercase tracking-widest text-red-400 bg-red-500/20 px-2 py-0.5 rounded border border-red-500/30">

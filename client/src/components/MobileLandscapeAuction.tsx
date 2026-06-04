@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import type { Socket } from 'socket.io-client';
-import type { RoomState, Player, VideoPhase } from '../types';
+import type { RoomState, Player, VideoPhase, TeamId } from '../types';
 import toast from 'react-hot-toast';
 import TeamPanel from './TeamPanel';
 import VideoPlayer from './VideoPlayer';
@@ -36,9 +36,10 @@ interface AuctionLayoutProps {
   actions: {
     placeBid: (code: string) => void;
     togglePause: (code: string) => void;
-    endAuction: (code: string) => void;
+      endAuction: (code: string) => void;
     resetRoom: (code: string) => void;
     leaveRoom: () => void;
+    selectTeam: (code: string, teamId: TeamId) => void;
     navigate: (path: string) => void;
   };
 }
@@ -59,6 +60,12 @@ export default function MobileLandscapeAuction({
 }: AuctionLayoutProps) {
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
   const [isBidding, setIsBidding] = useState(false);
+
+  const availableTeams = Object.values(roomState.teams).filter(team => team.ownerId === null);
+  const reservedTeams = Object.values(roomState.teams).filter(team => {
+    if (!team.ownerId) return false;
+    return roomState.players.some(p => p.teamId === team.teamId && p.socketId === '');
+  });
 
   useEffect(() => {
     setIsBidding(false);
@@ -241,9 +248,58 @@ export default function MobileLandscapeAuction({
         )}
       </div>
 
-      {/* Right panel: Chat Commentary (Compact) */}
-      <div className="w-[26%] h-full border-l border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden">
-        <div className="h-full overflow-y-auto custom-scrollbar">
+      {/* Right panel: Claim + Chat Commentary (Compact) */}
+      <div className="w-[26%] h-full border-l border-white/5 bg-[#0a0a0a] z-20 shadow-xl overflow-hidden flex flex-col">
+        <div className="px-4 py-4 border-b border-white/10 bg-[#080808]">
+          <div className="mb-3 text-[10px] uppercase tracking-[0.32em] text-gray-400 font-black">Room Summary</div>
+          <div className="grid grid-cols-2 gap-2 text-[11px] text-white">
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
+              <div className="text-gray-400 uppercase tracking-widest mb-1">Available</div>
+              <div className="text-lg font-black">{availableTeams.length}</div>
+            </div>
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
+              <div className="text-gray-400 uppercase tracking-widest mb-1">Reserved</div>
+              <div className="text-lg font-black">{reservedTeams.length}</div>
+            </div>
+          </div>
+        </div>
+
+        {myRole === 'spectator' && (
+          <div className="px-4 py-4 border-b border-white/10 bg-[#050505]">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.25em]">Claim team</h3>
+                <p className="text-[10px] text-gray-400 mt-1">Available teams can be claimed mid-auction.</p>
+              </div>
+            </div>
+
+            {availableTeams.length > 0 ? (
+              <div className="space-y-2">
+                {availableTeams.slice(0, 3).map(team => (
+                  <button
+                    key={team.teamId}
+                    onClick={() => actions.selectTeam(roomCode || '', team.teamId)}
+                    className="w-full text-left rounded-2xl bg-cyan-500/10 border border-cyan-500/15 px-3 py-3 transition hover:bg-cyan-500/15"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-black uppercase tracking-[0.2em] text-cyan-200">{team.teamId}</span>
+                      <span className="text-[10px] uppercase text-gray-300">Claim</span>
+                    </div>
+                  </button>
+                ))}
+                {availableTeams.length > 3 && (
+                  <div className="text-[11px] text-gray-400">{availableTeams.length - 3} more available teams</div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-[11px] text-gray-300">
+                No teams are available to claim right now. Reserved seats hold reconnecting managers.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           <ChatPanel roomCode={roomCode || ''} />
         </div>
       </div>

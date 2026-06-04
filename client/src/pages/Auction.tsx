@@ -17,6 +17,7 @@ export default function Auction() {
     allPlayers,
     myTeamId,
     placeBid,
+    selectTeam,
     videoManager,
     togglePause,
     endAuction,
@@ -189,6 +190,7 @@ export default function Auction() {
     highestBidderId,
     actions: {
       placeBid,
+      selectTeam,
       togglePause,
       endAuction,
       resetRoom,

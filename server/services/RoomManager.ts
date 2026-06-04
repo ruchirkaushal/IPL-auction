@@ -265,12 +265,23 @@ export const makeHandleLeaveRoom = (
               }
             }
 
-            if (!currentRoom.state.auction.isStarted) {
+              if (!currentRoom.state.auction.isStarted) {
               if (currentPlayer.teamId) {
                 currentRoom.state.teams[currentPlayer.teamId].ownerId = null;
                 currentRoom.state.teams[currentPlayer.teamId].ownerName = null;
               }
               currentRoom.state.players.splice(currentPlayerIndex, 1);
+            } else {
+              if (currentPlayer.teamId) {
+                const releasedTeamId = currentPlayer.teamId;
+                console.log(`[Room] Reconnect window expired for ${currentPlayer.name} in room ${roomCode}; releasing team ${releasedTeamId}`);
+                currentRoom.state.teams[releasedTeamId].ownerId = null;
+                currentRoom.state.teams[releasedTeamId].ownerName = null;
+                currentRoom.state.teams[releasedTeamId].status = 'idle';
+                currentPlayer.teamId = null;
+                currentPlayer.role = 'spectator';
+                currentPlayer.isReady = false;
+              }
             }
 
             const remainingActive = currentRoom.state.players.filter(p => p.socketId !== '');

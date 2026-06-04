@@ -123,6 +123,11 @@ export default function TeamPanel({ teams, allPlayers, roomPlayers }: TeamPanelP
                         );
                       })()}
                       <span className="text-white font-bold">{team.ownerName || 'AI Engine'}</span>
+                      {roomPlayers?.find(p => p.teamId === team.teamId && p.socketId === '') && (
+                        <span className="ml-2 text-[8px] uppercase tracking-[0.3em] font-black text-amber-200 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                          RESERVED
+                        </span>
+                      )}
                     </div>
                   </span>
                   <span className="text-[10px] font-medium tracking-wide">
