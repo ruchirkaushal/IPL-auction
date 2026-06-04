@@ -11,6 +11,7 @@ interface MobilePortraitAuctionProps {
   roomState: any;
   allPlayers: any[];
   myTeamId: string | null;
+  myRole: 'manager' | 'spectator';
   socket: any;
   videoManager: any;
   canBid: boolean;
@@ -34,6 +35,7 @@ export const MobilePortraitAuction: React.FC<MobilePortraitAuctionProps> = ({
   roomState,
   allPlayers,
   myTeamId,
+  myRole,
   socket,
   videoManager,
   canBid,
@@ -49,7 +51,12 @@ export const MobilePortraitAuction: React.FC<MobilePortraitAuctionProps> = ({
     <div className="flex flex-col h-screen bg-gray-950 text-white p-2 gap-2">
       {/* Header with room code and leave button */}
       <div className="flex justify-between items-center bg-gray-900 px-3 py-2 rounded">
-        <span className="font-bold text-sm">Room: {roomCode}</span>
+        <div>
+          <p className="font-bold text-sm">Room: {roomCode}</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mt-1">
+            {myRole === 'spectator' ? 'Spectator' : 'Manager'}
+          </p>
+        </div>
         <button
           onClick={() => actions.leaveRoom()}
           className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 rounded"

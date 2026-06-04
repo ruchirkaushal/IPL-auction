@@ -24,6 +24,7 @@ interface AuctionLayoutProps {
   roomState: RoomState;
   allPlayers: Player[];
   myTeamId: string | null;
+  myRole: 'manager' | 'spectator';
   socket: Socket | null;
   videoManager: VideoManager;
   canBid: boolean;
@@ -47,6 +48,7 @@ export default function MobileLandscapeAuction({
   roomState,
   allPlayers,
   myTeamId,
+  myRole,
   videoManager,
   canUserBid,
   isHost,
@@ -94,6 +96,9 @@ export default function MobileLandscapeAuction({
             <div className="flex items-center gap-1">
               <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
               <span className="text-[7px] font-black uppercase tracking-widest text-white/95">Live</span>
+            </div>
+            <div className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[7px] font-black uppercase tracking-widest ${myRole === 'spectator' ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/15' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/15'}`}>
+              <span>{myRole === 'spectator' ? 'Spectating' : 'Manager'}</span>
             </div>
           </div>
           <div className="flex gap-2 pointer-events-auto">
@@ -161,16 +166,16 @@ export default function MobileLandscapeAuction({
               ) : (
                 <button
                   onClick={() => {
-                    if (!roomCode || !canUserBid || isBidding) return;
+                    if (!roomCode || !canUserBid || isBidding || myRole !== 'manager') return;
                     setIsBidding(true);
                     actions.placeBid(roomCode);
                     setTimeout(() => setIsBidding(false), 500);
                   }}
-                  disabled={!canUserBid || isBidding}
+                  disabled={!canUserBid || isBidding || myRole !== 'manager'}
                   className={`
                     bid-btn w-24 h-10 rounded-lg font-black text-sm tracking-widest uppercase 
                     transition-all active:scale-95 border backdrop-blur-md
-                    ${(canUserBid && !isBidding)
+                    ${canUserBid && !isBidding && myRole === 'manager'
                       ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_15px_rgba(0,229,255,0.5)] border-[#00e5ff]'
                       : 'bg-white/5 text-gray-600 cursor-not-allowed border-white/10'
                     }

@@ -129,7 +129,7 @@ export const makeInitialRoomState = (roomCode: string, hostSocketId: string, hos
   return {
     roomCode,
     hostId: hostSocketId,
-    players: [{ socketId: hostSocketId, userId: hostUserId, name: hostName, teamId: null, isHost: true, isReady: false, presenceStatus: 'active' }],
+    players: [{ socketId: hostSocketId, userId: hostUserId, name: hostName, teamId: null, role: 'spectator', isHost: true, isReady: false, presenceStatus: 'active' }],
     teams: initialTeams,
     auction: {
       isStarted: false,
@@ -248,7 +248,7 @@ export const makeHandleLeaveRoom = (
 
             const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
 
-            if (currentPlayer.isHost && !currentRoom.state.isLocked) {
+            if (currentPlayer.isHost && !currentRoom.state.auction.isStarted) {
               currentPlayer.isHost = false;
               if (activePlayers.length > 0) {
                 const nextHost = activePlayers[0];
@@ -257,7 +257,7 @@ export const makeHandleLeaveRoom = (
               }
             }
 
-            if (!currentRoom.state.isLocked) {
+            if (!currentRoom.state.auction.isStarted) {
               if (currentPlayer.teamId) {
                 currentRoom.state.teams[currentPlayer.teamId].ownerId = null;
                 currentRoom.state.teams[currentPlayer.teamId].ownerName = null;
@@ -288,8 +288,8 @@ export const makeHandleLeaveRoom = (
           return;
         }
 
-        // Explicit leave during locked (live) auction → treat as disconnect
-        if (!isDisconnect && room.state.isLocked) {
+        // Explicit leave during live auction → treat as disconnect
+        if (!isDisconnect && room.state.auction.isStarted) {
           const clientSocket = io.sockets.sockets.get(socketId);
           if (clientSocket) clientSocket.leave(roomCode);
           handleLeaveRoom(socketId, true);

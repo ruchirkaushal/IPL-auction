@@ -72,11 +72,14 @@ export interface AuctionState {
   isPaused: boolean;
 }
 
+export type UserRole = 'manager' | 'spectator';
+
 export interface RoomPlayer {
   socketId: string;
   userId: string;
   name: string;
   teamId: TeamId | null;
+  role: UserRole;
   isHost: boolean;
   isReady: boolean;
   presenceStatus: 'active' | 'afk' | 'left' | 'never_joined';

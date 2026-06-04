@@ -58,8 +58,11 @@ export default function Lobby() {
   </div>;
 
   const me = roomState.players.find(p => p.socketId === socket?.id);
+  const myRole = me?.role ?? 'spectator';
   const isHost = me?.isHost;
-  const allReady = roomState.players.every(p => p.isReady);
+  const managers = roomState.players.filter(p => p.role === 'manager');
+  const spectators = roomState.players.filter(p => p.role === 'spectator');
+  const allReady = managers.length > 0 && managers.every(p => p.isReady && p.teamId !== null);
 
   if (isPhone && isPortrait) {
     return <RotateDeviceOverlay />;
@@ -79,6 +82,9 @@ export default function Lobby() {
             <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
               WAITING <span className="text-gray-500">AREA</span>
             </h1>
+            {myRole === 'spectator' && (
+              <p className="mt-3 text-sm uppercase tracking-[0.25em] text-cyan-300 font-black">You are spectating until you select a team.</p>
+            )}
           </div>
           
           <div className="bg-white/5 px-4 py-3 rounded-2xl border border-white/5 backdrop-blur-md flex items-center gap-4 shadow-2xl">
@@ -105,7 +111,7 @@ export default function Lobby() {
           <div className="md:col-span-3 glass rounded-2xl md:rounded-[2rem] border-white/5 md:overflow-hidden flex flex-col md:p-4 shrink-0">
             {/* Desktop Header */}
             <div className="hidden md:flex justify-between items-center mb-4">
-               <h3 className="text-base font-black tracking-tight">Managers <span className="text-gray-500 ml-1">({roomState.players.length}/10)</span></h3>
+               <h3 className="text-base font-black tracking-tight">Managers <span className="text-gray-500 ml-1">({managers.length}/10)</span></h3>
                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
             </div>
             
@@ -113,12 +119,12 @@ export default function Lobby() {
             <div className="md:hidden flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
               <div className="flex flex-col items-center">
                 <span className="text-[8px] font-black uppercase text-gray-500 tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[10px]">group</span> Managers</span>
-                <span className="text-sm font-black text-white">{roomState.players.filter(p => p.teamId).length} / 10</span>
+                <span className="text-sm font-black text-white">{managers.length} / 10</span>
               </div>
               <div className="w-px h-6 bg-white/10"></div>
               <div className="flex flex-col items-center">
                 <span className="text-[8px] font-black uppercase text-gray-500 tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[10px]">visibility</span> Spectators</span>
-                <span className="text-sm font-black text-white">{roomState.players.filter(p => !p.teamId).length}</span>
+                <span className="text-sm font-black text-white">{spectators.length}</span>
               </div>
               <div className="w-px h-6 bg-white/10"></div>
               <div className="flex flex-col items-center">

@@ -23,6 +23,7 @@ interface AuctionLayoutProps {
   roomState: RoomState;
   allPlayers: Player[];
   myTeamId: string | null;
+  myRole: 'manager' | 'spectator';
   socket: Socket | null;
   videoManager: VideoManager;
   canBid: boolean;
@@ -46,6 +47,7 @@ export default function DesktopAuctionLayout({
   roomState,
   allPlayers,
   myTeamId,
+  myRole,
   videoManager,
   canUserBid,
   isHost,
@@ -93,6 +95,9 @@ export default function DesktopAuctionLayout({
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/95">Live</span>
+            </div>
+            <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.24em] ${myRole === 'spectator' ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/20' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'}`}>
+              <span>{myRole === 'spectator' ? 'Spectating' : 'Manager'}</span>
             </div>
           </div>
           <div className="flex flex-col gap-3 pointer-events-auto items-end">

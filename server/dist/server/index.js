@@ -123,11 +123,6 @@ io.on('connection', (socket) => {
             });
             const existingPlayerIndex = room.state.players.findIndex(p => p.userId === userId || (p.userId === undefined && p.name === playerName));
             const isRejoining = existingPlayerIndex !== -1;
-            if (!isRejoining && room.state.isLocked) {
-                socket.emit('error', { message: 'Room is locked' });
-                console.log(`[Room] Join blocked: room ${roomCode} is locked for ${playerName}`);
-                return;
-            }
             if (!isRejoining && room.state.players.filter(p => p.socketId !== '').length >= 10) {
                 socket.emit('error', { message: 'Room is full' });
                 return;
@@ -148,7 +143,7 @@ io.on('connection', (socket) => {
             }
             else {
                 console.log(`[Room] New player ${playerName} joined room ${roomCode}`);
-                room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false, presenceStatus: 'active' });
+                room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, role: 'spectator', isHost: room.state.players.length === 0, isReady: false, presenceStatus: 'active' });
                 if (room.state.players.length === 1)
                     room.state.hostId = socket.id;
             }
@@ -178,6 +173,7 @@ io.on('connection', (socket) => {
                 room.state.teams[player.teamId].ownerName = null;
             }
             player.teamId = teamId;
+            player.role = 'manager';
             player.isReady = true;
             room.state.teams[teamId].ownerId = socket.id;
             room.state.teams[teamId].ownerName = player.name;
@@ -198,12 +194,12 @@ io.on('connection', (socket) => {
                 socket.emit('error', { message: 'Only host can start auction' });
                 return;
             }
-            if (!room.state.players.every(p => p.isReady && p.teamId !== null)) {
+            const managerPlayers = room.state.players.filter(p => p.role === 'manager');
+            if (managerPlayers.length === 0 || !managerPlayers.every(p => p.isReady && p.teamId !== null)) {
                 socket.emit('error', { message: 'All managers must select a team before starting the auction.' });
                 return;
             }
             (0, RoomManager_1.clearAllTimers)(room);
-            room.state.isLocked = true;
             const auctionQueue = (0, auctionSets_1.createAuctionQueue)();
             room.state.auction = {
                 isStarted: true,
@@ -242,8 +238,14 @@ io.on('connection', (socket) => {
             if (!room)
                 return;
             const player = room.state.players.find(p => p.socketId === socket.id);
-            if (!player || !player.teamId)
+            if (!player || player.role !== 'manager' || !player.teamId) {
+                socket.emit('error', { message: 'Only managers can place bids.' });
                 return;
+            }
+            if (room.state.auction.phase !== 'bidding') {
+                socket.emit('error', { message: 'Bids are only allowed while the auction is open.' });
+                return;
+            }
             if (!(0, AuctionEngine_1.placeBid)(room, player.teamId)) {
                 const expectedBid = (0, AuctionEngine_1.getAuthoritativeNextBid)(room.state);
                 socket.emit('bid_rejected', {
@@ -259,11 +261,17 @@ io.on('connection', (socket) => {
     socket.on('pass_bid', ({ roomCode }) => {
         try {
             const room = (0, RoomManager_1.getRoomOrNotify)(socket, roomCode, 'pass_bid');
-            if (!room || room.state.auction.phase !== 'bidding')
+            if (!room)
                 return;
+            if (room.state.auction.phase !== 'bidding') {
+                socket.emit('error', { message: 'You can only pass during bidding.' });
+                return;
+            }
             const player = room.state.players.find(p => p.socketId === socket.id);
-            if (!player || !player.teamId)
+            if (!player || player.role !== 'manager' || !player.teamId) {
+                socket.emit('error', { message: 'Only managers can pass on a bid.' });
                 return;
+            }
             if (!room.state.auction.passedTeams.includes(player.teamId)) {
                 room.state.auction.passedTeams.push(player.teamId);
                 room.state.teams[player.teamId].status = 'passed';
@@ -295,7 +303,7 @@ io.on('connection', (socket) => {
                 room.state.teams[teamId].overseasCount = 0;
                 room.state.teams[teamId].status = 'idle';
             });
-            room.state.players = room.state.players.map(p => ({ ...p, teamId: null, isReady: false }));
+            room.state.players = room.state.players.map(p => ({ ...p, teamId: null, role: 'spectator', isReady: false }));
             io.to(roomCode).emit('room_reset');
             emit(roomCode);
         }

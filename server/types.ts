@@ -1,5 +1,6 @@
 export type TeamId = 'MI' | 'CSK' | 'RCB' | 'KKR' | 'DC' | 'RR' | 'PBKS' | 'SRH' | 'GT' | 'LSG';
 export type PlayerRole = 'BAT' | 'BOWL' | 'AR' | 'WK';
+export type UserRole = 'manager' | 'spectator';
 export type AuctionPhase = 'bidding' | 'sold' | 'unsold' | 'advancing' | 'waiting';
 
 export interface ChatMessage {
@@ -24,7 +25,7 @@ export interface TeamState {
   status: 'idle' | 'leading' | 'passed'; 
 }
 export interface AuctionState { isStarted: boolean; currentPlayerIndex: number; auctionQueue: string[]; currentBid: number; nextBidAmount: number | null; highestBidderId: TeamId | null; ticks: number; phase: AuctionPhase; passedTeams: TeamId[]; isAdvancing: boolean; currentSetName: string; isPaused: boolean; }
-export interface RoomPlayer { socketId: string; userId: string; name: string; teamId: TeamId | null; isHost: boolean; isReady: boolean; presenceStatus: 'active' | 'afk' | 'left' | 'never_joined'; }
+export interface RoomPlayer { socketId: string; userId: string; name: string; teamId: TeamId | null; role: UserRole; isHost: boolean; isReady: boolean; presenceStatus: 'active' | 'afk' | 'left' | 'never_joined'; }
 export interface RoomState { roomCode: string; hostId: string; players: RoomPlayer[]; teams: Record<TeamId, TeamState>; auction: AuctionState; chat: ChatMessage[]; isLocked: boolean; }
 
 export interface RoomLifecycleEvent {

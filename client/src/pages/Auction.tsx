@@ -28,6 +28,8 @@ export default function Auction() {
   const { canBid } = useAuctionState(roomState, myTeamId, allPlayers);
   const { isPhone, isPortrait } = useDeviceDetect();
 
+  const me = roomState?.players.find(p => p.socketId === socket?.id);
+  const myRole = me?.role ?? 'spectator';
   const isHost = roomState?.hostId === socket?.id;
 
   // Compute sold and unsold players
@@ -159,6 +161,7 @@ export default function Auction() {
   const highestBidderId = roomState.auction.highestBidderId;
 
   const canUserBid = !!(
+    myRole === 'manager' &&
     canBid &&
     !roomState.auction.isPaused &&
     videoManager.auctionReadyForBids &&
@@ -175,6 +178,7 @@ export default function Auction() {
     roomState,
     allPlayers,
     myTeamId,
+    myRole,
     socket,
     videoManager,
     canBid,
