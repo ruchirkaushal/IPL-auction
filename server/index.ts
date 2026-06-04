@@ -66,7 +66,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const clientDistPath = path.resolve(__dirname, '../../client/dist');
+const clientDistPath = __dirname.includes(path.join('dist', 'server')) || __dirname.includes('dist/server')
+  ? path.resolve(__dirname, '../../../client/dist')
+  : path.resolve(__dirname, '../client/dist');
 app.use(express.static(clientDistPath));
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {

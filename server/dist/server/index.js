@@ -18,6 +18,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const path_1 = __importDefault(require("path"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
@@ -42,6 +43,17 @@ const auctionConfig_1 = require("../shared/auctionConfig");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+const clientDistPath = path_1.default.resolve(__dirname, '../../../client/dist');
+app.use(express_1.default.static(clientDistPath));
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {
+        return next();
+    }
+    res.sendFile(path_1.default.join(clientDistPath, 'index.html'), err => {
+        if (err)
+            next(err);
+    });
+});
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: { origin: '*' },
