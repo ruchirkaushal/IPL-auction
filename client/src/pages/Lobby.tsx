@@ -140,6 +140,12 @@ export default function Lobby() {
                   </div>
                   <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-2">
+                      <div className="relative group/status flex items-center">
+                        <div className={`w-2 h-2 rounded-full ${p.socketId ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-gray-500'}`}></div>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/status:block px-2 py-1 bg-black/90 backdrop-blur-sm text-white text-[9px] uppercase tracking-widest font-black rounded border border-white/10 whitespace-nowrap z-50">
+                           {p.socketId ? 'Online' : 'Offline / Disconnected'}
+                        </div>
+                      </div>
                       <p className="font-bold text-sm truncate">{p.name}</p>
                       {p.isHost && <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-blue-500/30">Host</span>}
                     </div>
@@ -150,7 +156,7 @@ export default function Lobby() {
                   {isHost && p.socketId !== socket?.id && (
                     <button
                       onClick={() => roomCode && kickPlayer(roomCode, p.socketId)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-500/25 rounded-xl text-red-400 hover:text-red-300 flex items-center justify-center"
+                      className="text-white/20 group-hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/25 rounded-xl flex items-center justify-center"
                       title="Kick Player"
                     >
                       <span className="material-symbols-outlined text-lg">person_remove</span>
