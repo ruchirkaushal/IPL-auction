@@ -66,25 +66,25 @@ export default function Lobby() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans overflow-y-auto selection:bg-blue-500/30">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen bg-[#050505] text-white flex flex-col font-sans selection:bg-blue-500/30 overflow-hidden">
+      <div className="flex-1 flex flex-col p-4 min-h-0">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+        <div className="flex flex-row justify-between items-center mb-4 gap-4 flex-shrink-0">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="w-8 h-1 bg-blue-500 rounded-full"></span>
-              <span className="text-xs font-black tracking-[0.4em] uppercase text-blue-500">Lobby Room</span>
+            <div className="flex items-center gap-3 mb-1">
+              <span className="w-6 h-0.5 bg-blue-500 rounded-full"></span>
+              <span className="text-[10px] font-black tracking-[0.4em] uppercase text-blue-500">Lobby Room</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
               WAITING <span className="text-gray-500">AREA</span>
             </h1>
           </div>
           
-          <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md flex items-center gap-6 shadow-2xl">
+          <div className="bg-white/5 px-4 py-3 rounded-2xl border border-white/5 backdrop-blur-md flex items-center gap-4 shadow-2xl">
             <div className="text-right">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Access Code</p>
-              <h2 className="text-4xl font-black font-mono tracking-tighter text-blue-400">{roomCode}</h2>
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Access Code</p>
+              <h2 className="text-2xl font-black font-mono tracking-tighter text-blue-400">{roomCode}</h2>
             </div>
             <button 
               onClick={() => {
@@ -92,23 +92,23 @@ export default function Lobby() {
                 navigator.clipboard.writeText(joinUrl);
                 toast.success('Referral link copied!', { style: { borderRadius: '12px', background: '#0f172a', color: '#fff' } });
               }}
-              className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all active:scale-90"
+              className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all active:scale-90"
             >
               <span className="material-symbols-outlined text-sm">content_copy</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
+        <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
           
           {/* Players Panel */}
-          <div className="lg:col-span-3 glass rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col p-6">
-            <div className="flex justify-between items-center mb-8">
-               <h3 className="text-xl font-black tracking-tight">Managers <span className="text-gray-500 ml-2">({roomState.players.length}/10)</span></h3>
+          <div className="col-span-3 glass rounded-[2rem] border-white/5 overflow-hidden flex flex-col p-4">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-base font-black tracking-tight">Managers <span className="text-gray-500 ml-1">({roomState.players.length}/10)</span></h3>
                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
             </div>
             
-            <div className="space-y-4 flex-grow">
+            <div className="space-y-2.5 flex-grow overflow-y-auto custom-scrollbar">
               {roomState.players.map(p => (
                 <div key={p.socketId} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group transition-all hover:bg-white/[0.08]">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black p-1 bg-white/5 ${p.teamId ? 'border border-white/10' : 'text-white/20 border border-dashed border-white/20'}`}>
@@ -146,33 +146,30 @@ export default function Lobby() {
             </div>
 
             {isHost && (
-              <div className="mt-10">
+              <div className="mt-4">
                 <button 
                   onClick={() => roomCode && startAuction(roomCode)}
                   disabled={!allReady}
-                  className="w-full relative overflow-hidden bg-white text-black font-black text-lg py-5 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:-translate-y-1 transition-all duration-300 disabled:opacity-20 disabled:hover:translate-y-0 active:scale-95 group"
+                  className="w-full relative overflow-hidden bg-white text-black font-black text-sm py-3.5 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:-translate-y-1 transition-all duration-300 disabled:opacity-20 disabled:hover:translate-y-0 active:scale-95 group"
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-3">
+                  <span className="relative z-10 flex items-center justify-center gap-2">
                     INITIALIZE AUCTION
-                    <span className="material-symbols-outlined text-[24px]">rocket_launch</span>
+                    <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
                   </span>
                   <div className="absolute inset-0 bg-blue-500 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 </button>
-                <p className="text-[9px] text-center mt-4 font-black uppercase tracking-[0.2em] text-gray-500">
-                  Waiting for all managers to pick teams
-                </p>
               </div>
             )}
           </div>
 
           {/* Teams Selection Panel */}
-          <div className="lg:col-span-6 glass rounded-[2.5rem] border-white/5 overflow-y-auto custom-scrollbar p-6 flex flex-col">
-            <div className="mb-8">
-               <h3 className="text-xl font-black tracking-tight">Select Franchise</h3>
-               <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide">Each manager must lead a unique IPL franchise.</p>
+          <div className="col-span-6 glass rounded-[2rem] border-white/5 overflow-y-auto custom-scrollbar p-4 flex flex-col">
+            <div className="mb-4">
+               <h3 className="text-base font-black tracking-tight">Select Franchise</h3>
+               <p className="text-[10px] text-gray-500 mt-0.5 font-medium tracking-wide">Each manager must lead a unique IPL franchise.</p>
             </div>
             
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {ALL_TEAM_IDS.map((teamId: TeamId) => {
                 const team = TEAMS[teamId];
                 const teamState = roomState.teams[teamId];
@@ -183,7 +180,7 @@ export default function Lobby() {
                   <div 
                     key={teamId}
                     onClick={() => !isTaken && roomCode && selectTeam(roomCode, teamId)}
-                    className={`relative group h-40 rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 ${
+                    className={`relative group h-32 rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${
                       isTaken && !isMine ? 'opacity-30 grayscale cursor-not-allowed border-transparent' : 
                       isMine ? 'ring-4 ring-blue-500 scale-105 shadow-2xl' : 
                       'bg-white/5 border border-white/10 hover:bg-white/[0.08] hover:border-white/20 hover:scale-[1.02]'
@@ -194,7 +191,7 @@ export default function Lobby() {
                     
                     <div className="absolute inset-0 p-4 flex flex-col items-center justify-center text-center">
                       <div 
-                        className="w-16 h-16 rounded-2xl mb-4 flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-110 duration-500 p-2.5 bg-white/10 backdrop-blur-sm border border-white/10" 
+                        className="w-12 h-12 rounded-xl mb-2 flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-110 duration-500 p-2 bg-white/10 backdrop-blur-sm border border-white/10" 
                         style={{ boxShadow: `0 10px 30px ${team.primaryColor}40` }}
                       >
                          <img src={team.logoUrl} alt={team.name} className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" />
@@ -214,8 +211,8 @@ export default function Lobby() {
           </div>
 
           {/* Chat Panel */}
-          <div className="lg:col-span-3 rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col h-full bg-[#0a0a0a]">
-            {roomCode && <ChatPanel roomCode={roomCode} />}
+          <div className="col-span-3 rounded-[2rem] border border-white/5 overflow-hidden flex flex-col bg-[#0a0a0a]">
+            {roomCode && <ChatPanel roomCode={roomCode} showSystemMessages={false} />}
           </div>
 
         </div>

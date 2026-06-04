@@ -5,16 +5,20 @@ import { formatAuctionMoney } from '../../../shared/auctionPricing';
 
 interface ChatPanelProps {
   roomCode: string;
+  showSystemMessages?: boolean;
 }
 
-export default function ChatPanel({ roomCode }: ChatPanelProps) {
+export default function ChatPanel({ roomCode, showSystemMessages = true }: ChatPanelProps) {
   const { roomState, sendChat, socket } = useSocketContext();
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isLockedRef = useRef(true);
 
-  const messages = roomState?.chat || [];
+  const allMessages = roomState?.chat || [];
+  const messages = showSystemMessages
+    ? allMessages
+    : allMessages.filter(msg => msg.type === 'user');
 
   const handleScroll = () => {
     if (!containerRef.current) return;
