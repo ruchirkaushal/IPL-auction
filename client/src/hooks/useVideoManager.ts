@@ -9,7 +9,7 @@ export const useVideoManager = () => {
   const [graphicsReady, setGraphicsReady] = useState(false);
   const [auctionReadyForBids, setAuctionReadyForBids] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const introTimeoutRef = useRef<any>(null);
   const resultTimeoutRef = useRef<any>(null);

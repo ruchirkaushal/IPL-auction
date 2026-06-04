@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { SocketProvider } from './SocketContext';
 import { Toaster } from 'react-hot-toast';
-import { Analytics } from '@vercel/analytics/react';
 import { store } from './store';
 import Home from './pages/Home';
 import Lobby from './pages/Lobby';
@@ -21,7 +20,6 @@ function App() {
             <Route path="/summary/:roomCode" element={<Summary />} />
           </Routes>
           <Toaster position="top-right" />
-          <Analytics />
         </SocketProvider>
       </BrowserRouter>
     </Provider>

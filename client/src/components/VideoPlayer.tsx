@@ -23,7 +23,7 @@ const COUNTRY_CODES: Record<string, string> = {
 };
 
 interface VideoPlayerProps {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: RefObject<HTMLVideoElement>;
   videoPhase: VideoPhase;
   introFrozen: boolean;
   onGraphicsReady?: () => void;

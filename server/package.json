@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "ts-node index.ts",
-    "build": "npm --prefix ../client run build && tsc",
+    "build": "npm --prefix ../client install && npm --prefix ../client run build && tsc",
     "start": "node dist/server/index.js",
     "scan-duplicates": "ts-node scan-duplicates.ts",
     "test": "ts-node test/testUtils.ts"

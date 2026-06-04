@@ -11,7 +11,7 @@ import { TEAMS } from '../constants/teams';
 import '../mobileLandscape.css';
 
 type VideoManager = {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: RefObject<HTMLVideoElement>;
   videoPhase: VideoPhase;
   introFrozen: boolean;
   markGraphicsReady: () => void;

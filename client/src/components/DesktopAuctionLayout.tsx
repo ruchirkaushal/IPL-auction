@@ -10,7 +10,7 @@ import PlayerDatabase from './PlayerDatabase';
 import { TEAMS } from '../constants/teams';
 
 type VideoManager = {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: RefObject<HTMLVideoElement>;
   videoPhase: VideoPhase;
   introFrozen: boolean;
   markGraphicsReady: () => void;
