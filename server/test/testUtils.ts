@@ -42,6 +42,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'occupied',
       },
       CSK: {
         teamId: 'CSK',
@@ -51,6 +52,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'occupied',
       },
       RCB: {
         teamId: 'RCB',
@@ -60,6 +62,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       KKR: {
         teamId: 'KKR',
@@ -69,6 +72,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       DC: {
         teamId: 'DC',
@@ -78,6 +82,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       RR: {
         teamId: 'RR',
@@ -87,6 +92,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       PBKS: {
         teamId: 'PBKS',
@@ -96,6 +102,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       SRH: {
         teamId: 'SRH',
@@ -105,6 +112,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       GT: {
         teamId: 'GT',
@@ -114,6 +122,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
       LSG: {
         teamId: 'LSG',
@@ -123,6 +132,7 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         squad: [],
         overseasCount: 0,
         status: 'idle',
+        availability: 'available',
       },
     },
     auction: {

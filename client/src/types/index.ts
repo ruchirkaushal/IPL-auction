@@ -55,6 +55,7 @@ export interface TeamState {
   squad: { id: string, price: number }[]; // player ids with sold price
   overseasCount: number;
   status: 'idle' | 'leading' | 'passed';
+  availability: 'available' | 'occupied' | 'reserved';
 }
 
 export interface AuctionState {

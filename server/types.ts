@@ -23,6 +23,7 @@ export interface TeamState {
   squad: { id: string, price: number }[]; 
   overseasCount: number; 
   status: 'idle' | 'leading' | 'passed'; 
+  availability: 'available' | 'occupied' | 'reserved'; 
 }
 export interface AuctionState { isStarted: boolean; currentPlayerIndex: number; auctionQueue: string[]; currentBid: number; nextBidAmount: number | null; highestBidderId: TeamId | null; ticks: number; phase: AuctionPhase; passedTeams: TeamId[]; isAdvancing: boolean; currentSetName: string; isPaused: boolean; }
 export interface RoomPlayer { socketId: string; userId: string; name: string; teamId: TeamId | null; role: UserRole; isHost: boolean; isReady: boolean; presenceStatus: 'active' | 'afk' | 'left' | 'never_joined'; }

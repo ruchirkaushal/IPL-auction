@@ -61,10 +61,6 @@ export default function DesktopAuctionLayout({
   const [isBidding, setIsBidding] = useState(false);
 
   const availableTeams = Object.values(roomState.teams).filter(team => team.ownerId === null);
-  const reservedTeams = Object.values(roomState.teams).filter(team => {
-    if (!team.ownerId) return false;
-    return roomState.players.some(p => p.teamId === team.teamId && p.socketId === '');
-  });
 
   useEffect(() => {
     setIsBidding(false);
@@ -267,31 +263,6 @@ export default function DesktopAuctionLayout({
 
       {/* Right panel: Claim + Chat Commentary */}
       <div className="w-full lg:w-[24%] h-[30%] lg:h-full border-t lg:border-t-0 lg:border-l border-white/5 bg-[#0a0a0a] z-20 shadow-2xl flex flex-col overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/10 bg-[#050505]">
-          <div className="flex items-center justify-between gap-3 mb-3 text-[10px] uppercase tracking-[0.35em] text-gray-400 font-black">
-            <span>Room Status</span>
-            <span className="text-white/70">Live</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-white">
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
-              <div className="text-gray-400 uppercase tracking-widest mb-1">Managers</div>
-              <div className="text-lg font-black">{roomState.players.filter(p => p.role === 'manager').length}</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
-              <div className="text-gray-400 uppercase tracking-widest mb-1">Spectators</div>
-              <div className="text-lg font-black">{roomState.players.filter(p => p.role === 'spectator').length}</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
-              <div className="text-gray-400 uppercase tracking-widest mb-1">Available</div>
-              <div className="text-lg font-black">{availableTeams.length}</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
-              <div className="text-gray-400 uppercase tracking-widest mb-1">Reserved</div>
-              <div className="text-lg font-black">{reservedTeams.length}</div>
-            </div>
-          </div>
-        </div>
-
         {myRole === 'spectator' && (
           <div className="px-5 py-4 border-b border-white/10 bg-[#080808]">
             <div className="flex items-center justify-between mb-3">
@@ -303,7 +274,7 @@ export default function DesktopAuctionLayout({
 
             {availableTeams.length > 0 ? (
               <div className="grid gap-2">
-                {availableTeams.slice(0, 4).map(team => (
+                {availableTeams.map(team => (
                   <button
                     key={team.teamId}
                     onClick={() => actions.selectTeam(roomCode || '', team.teamId)}
@@ -315,9 +286,6 @@ export default function DesktopAuctionLayout({
                     </div>
                   </button>
                 ))}
-                {availableTeams.length > 4 && (
-                  <div className="text-[11px] text-gray-400">{availableTeams.length - 4} more available teams</div>
-                )}
               </div>
             ) : (
               <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-[11px] text-gray-300">

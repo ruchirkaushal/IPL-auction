@@ -246,6 +246,7 @@ io.on('connection', (socket: Socket) => {
         if (oldPlayer.teamId) {
           room.state.teams[oldPlayer.teamId].ownerId = socket.id;
           room.state.teams[oldPlayer.teamId].ownerName = oldPlayer.name;
+          room.state.teams[oldPlayer.teamId].availability = 'occupied';
         }
         if (oldPlayer.isHost) {
           room.state.hostId = socket.id;
@@ -279,12 +280,14 @@ io.on('connection', (socket: Socket) => {
       if (player.teamId) {
         room.state.teams[player.teamId].ownerId = null;
         room.state.teams[player.teamId].ownerName = null;
+        room.state.teams[player.teamId].availability = 'available';
       }
       player.teamId = teamId;
       player.role = 'manager';
       player.isReady = true;
       room.state.teams[teamId].ownerId = socket.id;
       room.state.teams[teamId].ownerName = player.name;
+      room.state.teams[teamId].availability = 'occupied';
       emit(roomCode);
       roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(select_team) failed:`, err); }
@@ -407,6 +410,7 @@ io.on('connection', (socket: Socket) => {
         room.state.teams[teamId].squad = [];
         room.state.teams[teamId].overseasCount = 0;
         room.state.teams[teamId].status = 'idle';
+        room.state.teams[teamId].availability = 'available';
       });
       room.state.players = room.state.players.map(p => ({ ...p, teamId: null, role: 'spectator', isReady: false }));
       io.to(roomCode).emit('room_reset');
@@ -424,6 +428,7 @@ io.on('connection', (socket: Socket) => {
       if (!player) return;
       addChatMessage(room, { type: 'user', sender: player.name, text, teamId: player.teamId || undefined });
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
       roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(send_chat) failed:`, err); }
   });
@@ -493,12 +498,14 @@ io.on('connection', (socket: Socket) => {
         if (player.teamId) {
           room.state.teams[player.teamId].ownerId = null;
           room.state.teams[player.teamId].ownerName = null;
+          room.state.teams[player.teamId].availability = 'available';
         }
         room.state.players.splice(playerIndex, 1);
         io.to(targetSocketId).emit('kicked');
         const targetSocket = io.sockets.sockets.get(targetSocketId);
         if (targetSocket) targetSocket.leave(roomCode);
         emit(roomCode);
+        roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
       }
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(kick_player) failed:`, err); }
   });

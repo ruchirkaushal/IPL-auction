@@ -123,7 +123,8 @@ export const makeInitialRoomState = (roomCode: string, hostSocketId: string, hos
       purseRemaining: INITIAL_PURSE_LAKHS,
       squad: [],
       overseasCount: 0,
-      status: 'idle'
+      status: 'idle',
+      availability: 'available'
     };
   });
 
@@ -228,6 +229,9 @@ export const makeHandleLeaveRoom = (
         if (isDisconnect) {
           player.socketId = '';
           player.presenceStatus = 'left';
+          if (player.teamId) {
+            room.state.teams[player.teamId].availability = 'reserved';
+          }
           roomService.updatePlayerSession(roomCode, player.userId, 'disconnected').catch(err => {
             console.warn('[RoomService] updatePlayerSession failed', err);
           });
@@ -256,19 +260,21 @@ export const makeHandleLeaveRoom = (
 
             const activePlayers = currentRoom.state.players.filter(p => p.socketId !== '');
 
-            if (currentPlayer.isHost && !currentRoom.state.auction.isStarted) {
-              currentPlayer.isHost = false;
+            if (currentPlayer.isHost) {
               if (activePlayers.length > 0) {
                 const nextHost = activePlayers[0];
                 nextHost.isHost = true;
                 currentRoom.state.hostId = nextHost.socketId;
+                currentPlayer.isHost = false;
+                console.log(`[Room] Reconnect window expired for host ${currentPlayer.name} in room ${roomCode}; new host is ${nextHost.name}`);
               }
             }
 
-              if (!currentRoom.state.auction.isStarted) {
+            if (!currentRoom.state.auction.isStarted) {
               if (currentPlayer.teamId) {
                 currentRoom.state.teams[currentPlayer.teamId].ownerId = null;
                 currentRoom.state.teams[currentPlayer.teamId].ownerName = null;
+                currentRoom.state.teams[currentPlayer.teamId].availability = 'available';
               }
               currentRoom.state.players.splice(currentPlayerIndex, 1);
             } else {
@@ -278,6 +284,7 @@ export const makeHandleLeaveRoom = (
                 currentRoom.state.teams[releasedTeamId].ownerId = null;
                 currentRoom.state.teams[releasedTeamId].ownerName = null;
                 currentRoom.state.teams[releasedTeamId].status = 'idle';
+                currentRoom.state.teams[releasedTeamId].availability = 'available';
                 currentPlayer.teamId = null;
                 currentPlayer.role = 'spectator';
                 currentPlayer.isReady = false;
@@ -329,6 +336,7 @@ export const makeHandleLeaveRoom = (
         if (player.teamId) {
           room.state.teams[player.teamId].ownerId = null;
           room.state.teams[player.teamId].ownerName = null;
+          room.state.teams[player.teamId].availability = 'available';
         }
         room.state.players.splice(playerIndex, 1);
         roomService.updatePlayerSession(roomCode, player.userId, 'left').catch(err => {
