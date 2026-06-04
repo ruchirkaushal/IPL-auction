@@ -31,6 +31,10 @@ const utils_1 = require("./utils");
 const RoomManager_1 = require("./services/RoomManager");
 const AuctionEngine_1 = require("./services/AuctionEngine");
 const Telemetry_1 = require("./services/Telemetry");
+const RoomService_1 = require("./services/RoomService");
+const AuctionTimer_1 = require("./services/AuctionTimer");
+const RedisService_1 = require("./services/RedisService");
+const SocketEventHandling_1 = require("./services/SocketEventHandling");
 const auctionConfig_1 = require("../shared/auctionConfig");
 // ---------------------------------------------------------------------------
 // Server setup
@@ -56,6 +60,17 @@ const emit = (roomCode) => (0, RoomManager_1.emitRoomState)(roomCode, AuctionEng
 (0, RoomManager_1.initRoomManager)(io);
 (0, AuctionEngine_1.initAuctionEngine)(io, emit);
 (0, RoomManager_1.startFreezeWatchdog)();
+const roomService = new RoomService_1.RoomService();
+const timerManager = new AuctionTimer_1.TimerManager();
+const redisService = new RedisService_1.RedisService();
+const socketEventQueue = new SocketEventHandling_1.SocketEventQueue();
+const rateLimiter = new SocketEventHandling_1.RateLimiter(120, 60000);
+// Expose basic service health for Phase 3 readiness
+redisService.healthCheck().then(() => {
+    console.log('[Phase 3] RedisService is ready');
+}).catch(err => {
+    console.warn('[Phase 3] RedisService health check failed', err);
+});
 // ---------------------------------------------------------------------------
 // REST Routes
 // ---------------------------------------------------------------------------
@@ -79,6 +94,14 @@ console.log(`Loaded ${constants_1.PLAYERS.length} players from the IPL database`
 // ---------------------------------------------------------------------------
 const handleLeaveRoom = (0, RoomManager_1.makeHandleLeaveRoom)(io, emit);
 io.on('connection', (socket) => {
+    socket.use((packet, next) => {
+        const eventName = packet[0];
+        if (typeof eventName === 'string' && !rateLimiter.allow(socket.id)) {
+            socket.emit('error', { message: 'Rate limit exceeded' });
+            return;
+        }
+        next();
+    });
     // -- create_room --
     socket.on('create_room', ({ playerName, userId }) => {
         try {
@@ -92,6 +115,7 @@ io.on('connection', (socket) => {
             socket.emit('room_created', { roomCode });
             console.log(`[DIAGNOSTICS: ROOM] Created room ${roomCode} for ${playerName} (${userId})`);
             emit(roomCode);
+            roomService.saveRoom(newRoom).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(create_room) failed:`, err);
@@ -150,6 +174,7 @@ io.on('connection', (socket) => {
             socket.join(roomCode);
             socket.emit('room_joined', { roomCode });
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(join_room) failed:`, err);
@@ -178,6 +203,7 @@ io.on('connection', (socket) => {
             room.state.teams[teamId].ownerId = socket.id;
             room.state.teams[teamId].ownerName = player.name;
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(select_team) failed:`, err);
@@ -224,6 +250,7 @@ io.on('connection', (socket) => {
             (0, Telemetry_1.logAuctionEvent)(room, 'auction_started');
             console.log(`[Auction] Started in room ${roomCode}. Queue: ${auctionQueue.length}, First: ${firstPlayerId}`);
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
             (0, AuctionEngine_1.startTimer)(room);
             (0, AuctionEngine_1.scheduleAiBids)(room);
         }
@@ -252,6 +279,9 @@ io.on('connection', (socket) => {
                     reason: expectedBid === null ? 'Invalid bid' : `Invalid bid. Next valid amount is ${(0, auctionPricing_2.formatAuctionMoney)(expectedBid)}.`,
                 });
             }
+            else {
+                roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
+            }
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(place_bid) failed:`, err);
@@ -276,6 +306,7 @@ io.on('connection', (socket) => {
                 room.state.auction.passedTeams.push(player.teamId);
                 room.state.teams[player.teamId].status = 'passed';
                 emit(roomCode);
+                roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
             }
         }
         catch (err) {
@@ -306,6 +337,7 @@ io.on('connection', (socket) => {
             room.state.players = room.state.players.map(p => ({ ...p, teamId: null, role: 'spectator', isReady: false }));
             io.to(roomCode).emit('room_reset');
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(reset_room) failed:`, err);
@@ -322,6 +354,7 @@ io.on('connection', (socket) => {
                 return;
             (0, AuctionEngine_1.addChatMessage)(room, { type: 'user', sender: player.name, text, teamId: player.teamId || undefined });
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(send_chat) failed:`, err);
@@ -359,6 +392,7 @@ io.on('connection', (socket) => {
                 (0, Telemetry_1.logAuctionEvent)(room, 'auction_resumed', { phase });
             }
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(toggle_pause) failed:`, err);
@@ -375,6 +409,7 @@ io.on('connection', (socket) => {
             room.state.auction.phase = 'waiting';
             io.to(roomCode).emit('auction_complete', room.state);
             emit(roomCode);
+            roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(end_auction) failed:`, err);

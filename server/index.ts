@@ -51,6 +51,10 @@ import {
   advanceToNextPlayer, scheduleAutoAdvance
 } from './services/AuctionEngine';
 import { recordLifecycle, logAuctionEvent } from './services/Telemetry';
+import { RoomService } from './services/RoomService';
+import { TimerManager } from './services/AuctionTimer';
+import { RedisService } from './services/RedisService';
+import { RateLimiter, SocketEventQueue } from './services/SocketEventHandling';
 import { INITIAL_PURSE_LAKHS } from '../shared/auctionConfig';
 
 // ---------------------------------------------------------------------------
@@ -82,6 +86,19 @@ initRoomManager(io);
 initAuctionEngine(io, emit);
 startFreezeWatchdog();
 
+const roomService = new RoomService();
+const timerManager = new TimerManager();
+const redisService = new RedisService();
+const socketEventQueue = new SocketEventQueue();
+const rateLimiter = new RateLimiter(120, 60000);
+
+// Expose basic service health for Phase 3 readiness
+redisService.healthCheck().then(() => {
+  console.log('[Phase 3] RedisService is ready');
+}).catch(err => {
+  console.warn('[Phase 3] RedisService health check failed', err);
+});
+
 // ---------------------------------------------------------------------------
 // REST Routes
 // ---------------------------------------------------------------------------
@@ -112,6 +129,14 @@ console.log(`Loaded ${PLAYERS.length} players from the IPL database`);
 const handleLeaveRoom = makeHandleLeaveRoom(io, emit);
 
 io.on('connection', (socket: Socket) => {
+  socket.use((packet, next) => {
+    const eventName = packet[0] as string;
+    if (typeof eventName === 'string' && !rateLimiter.allow(socket.id)) {
+      socket.emit('error', { message: 'Rate limit exceeded' });
+      return;
+    }
+    next();
+  });
 
   // -- create_room --
   socket.on('create_room', ({ playerName, userId }: { playerName: string, userId: string }) => {
@@ -126,6 +151,7 @@ io.on('connection', (socket: Socket) => {
       socket.emit('room_created', { roomCode });
       console.log(`[DIAGNOSTICS: ROOM] Created room ${roomCode} for ${playerName} (${userId})`);
       emit(roomCode);
+      roomService.saveRoom(newRoom).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(create_room) failed:`, err); }
   });
 
@@ -185,6 +211,7 @@ io.on('connection', (socket: Socket) => {
       socket.join(roomCode);
       socket.emit('room_joined', { roomCode });
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(join_room) failed:`, err); }
   });
 
@@ -209,6 +236,7 @@ io.on('connection', (socket: Socket) => {
       room.state.teams[teamId].ownerId = socket.id;
       room.state.teams[teamId].ownerName = player.name;
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(select_team) failed:`, err); }
   });
 
@@ -255,6 +283,7 @@ io.on('connection', (socket: Socket) => {
       logAuctionEvent(room, 'auction_started');
       console.log(`[Auction] Started in room ${roomCode}. Queue: ${auctionQueue.length}, First: ${firstPlayerId}`);
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
       startTimer(room);
       scheduleAiBids(room);
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(start_auction) failed:`, err); }
@@ -280,6 +309,8 @@ io.on('connection', (socket: Socket) => {
         socket.emit('bid_rejected', {
           reason: expectedBid === null ? 'Invalid bid' : `Invalid bid. Next valid amount is ${formatAuctionMoney(expectedBid)}.`,
         });
+      } else {
+        roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
       }
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(place_bid) failed:`, err); }
   });
@@ -302,6 +333,7 @@ io.on('connection', (socket: Socket) => {
         room.state.auction.passedTeams.push(player.teamId);
         room.state.teams[player.teamId].status = 'passed';
         emit(roomCode);
+        roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
       }
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(pass_bid) failed:`, err); }
   });
@@ -329,6 +361,7 @@ io.on('connection', (socket: Socket) => {
       room.state.players = room.state.players.map(p => ({ ...p, teamId: null, role: 'spectator', isReady: false }));
       io.to(roomCode).emit('room_reset');
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(reset_room) failed:`, err); }
   });
 
@@ -341,6 +374,7 @@ io.on('connection', (socket: Socket) => {
       if (!player) return;
       addChatMessage(room, { type: 'user', sender: player.name, text, teamId: player.teamId || undefined });
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(send_chat) failed:`, err); }
   });
 
@@ -375,6 +409,7 @@ io.on('connection', (socket: Socket) => {
       }
 
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(toggle_pause) failed:`, err); }
   });
 
@@ -388,6 +423,7 @@ io.on('connection', (socket: Socket) => {
       room.state.auction.phase = 'waiting';
       io.to(roomCode).emit('auction_complete', room.state);
       emit(roomCode);
+      roomService.saveRoom(room).catch(err => console.error('[RoomService] saveRoom failed', err));
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(end_auction) failed:`, err); }
   });
 
