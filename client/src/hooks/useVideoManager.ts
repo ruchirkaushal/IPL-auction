@@ -104,7 +104,7 @@ export const useVideoManager = () => {
         }
       };
 
-      videoRef.current.play()?.catch(err => console.log('start.mp4:', err));
+      videoRef.current.play()?.catch((err: any) => console.log('start.mp4:', err));
     }
 
     introTimeoutRef.current = setTimeout(() => {
@@ -145,7 +145,7 @@ export const useVideoManager = () => {
             loadEndVideoStatic();
           }
         };
-        videoRef.current.play()?.catch(err => console.log('team video:', err));
+        videoRef.current.play()?.catch((err: any) => console.log('team video:', err));
       }
       setPhase('TEAM_BIDDING');
     }
@@ -185,14 +185,14 @@ export const useVideoManager = () => {
       if (phase === 'WAITING_END') {
         // SCENARIO A: end.mp4 already loaded and paused — just play
         video.currentTime = 0;
-        video.play()?.catch(err => console.log('end.mp4 play (A):', err));
+        video.play()?.catch((err: any) => console.log('end.mp4 play (A):', err));
       } else {
         // SCENARIO B: team video was playing — switch to end.mp4 and play
         video.oncanplay = () => {
           video.oncanplay = null;
           if (videoPhaseRef.current === 'OUTRO_PLAYING') {
             video.currentTime = 0;
-            video.play()?.catch(err => console.log('end.mp4 play (B):', err));
+            video.play()?.catch((err: any) => console.log('end.mp4 play (B):', err));
           }
         };
         video.src = '/videos/end.mp4';

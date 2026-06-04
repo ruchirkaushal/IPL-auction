@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { RefObject } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { RoomState, Player, VideoPhase, TeamId } from '../types';
 import toast from 'react-hot-toast';
@@ -11,7 +10,7 @@ import { TEAMS } from '../constants/teams';
 import '../mobileLandscape.css';
 
 type VideoManager = {
-  videoRef: RefObject<HTMLVideoElement>;
+  videoRef: any;
   videoPhase: VideoPhase;
   introFrozen: boolean;
   markGraphicsReady: () => void;

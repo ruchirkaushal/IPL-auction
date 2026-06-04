@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { RefObject, TransitionEvent } from 'react';
+import type { TransitionEvent } from 'react';
 import type { VideoPhase } from '../types';
 import { formatAuctionMoney } from '../../../shared/auctionPricing';
 import { useSocketContext } from '../SocketContext';
@@ -23,7 +23,7 @@ const COUNTRY_CODES: Record<string, string> = {
 };
 
 interface VideoPlayerProps {
-  videoRef: RefObject<HTMLVideoElement>;
+  videoRef: any;
   videoPhase: VideoPhase;
   introFrozen: boolean;
   onGraphicsReady?: () => void;
@@ -79,7 +79,7 @@ export default function VideoPlayer({ videoRef, videoPhase, introFrozen, onGraph
       videoRef.current.pause();
     } else {
       if (videoPhase !== 'WAITING_END' && videoPhase !== 'RESULT_SHOWN') {
-        videoRef.current.play().catch(err => console.log('Resume video error:', err));
+        videoRef.current.play().catch((err: any) => console.log('Resume video error:', err));
       }
     }
   }, [isPaused, videoPhase, videoRef]);
