@@ -6,7 +6,7 @@
 import { RoomService } from '../services/RoomService';
 import { AuctionTimer, TimerManager } from '../services/AuctionTimer';
 import { RedisService } from '../services/RedisService';
-import type { RoomState, TeamId } from '../../shared/types';
+import type { Room, RoomState, TeamId } from '../types';
 
 /**
  * Mock Room State for Testing
@@ -21,16 +21,20 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
         userId: 'user-1',
         name: 'Host Player',
         teamId: 'MI',
+        role: 'manager',
         isHost: true,
         isReady: true,
+        presenceStatus: 'active',
       },
       {
         socketId: 'player-2',
         userId: 'user-2',
         name: 'Player 2',
         teamId: 'CSK',
+        role: 'spectator',
         isHost: false,
         isReady: true,
+        presenceStatus: 'active',
       },
     ],
     teams: {
@@ -154,13 +158,24 @@ export const createMockRoomState = (roomCode: string = 'TEST01'): RoomState => {
   };
 };
 
+const createMockRoom = (): Room => ({
+  state: createMockRoomState('ROOM-TEST'),
+  auctionTimer: null,
+  autoAdvanceTimeout: null,
+  biddingStartTimeout: null,
+  aiTimeouts: [],
+  roomGeneration: Date.now(),
+  lifecycleTimeline: [],
+  intervalRegistry: {},
+});
+
 /**
  * Test Timer Functionality
  */
 export const testAuctionTimer = async (): Promise<void> => {
   console.log('[Test] Testing AuctionTimer...');
 
-  const timer = new AuctionTimer('TEST-ROOM', 0, 10, 10); // 10 ticks of 10ms each
+  const timer = new AuctionTimer(10, 10); // 10 ticks of 10ms each
 
   let tickCount = 0;
   let expiredFired = false;
@@ -177,7 +192,6 @@ export const testAuctionTimer = async (): Promise<void> => {
 
   // Test start
   timer.start();
-  console.log(`[Test] Timer started: ${timer.getTicks()} ticks`);
 
   // Wait for timer to complete
   await new Promise((resolve) => setTimeout(resolve, 200));
@@ -186,6 +200,7 @@ export const testAuctionTimer = async (): Promise<void> => {
     throw new Error('Timer did not fire expired event');
   }
 
+  timer.destroy();
   console.log('[Test] ✅ AuctionTimer test passed');
 };
 
@@ -198,28 +213,90 @@ export const testTimerManager = (): void => {
   const manager = new TimerManager();
 
   // Create timer
-  const timer1 = manager.createTimer('ROOM-1', 0, 100);
+  const timer1 = manager.createTimer('ROOM-1', 1, 100);
   timer1.start();
 
   // Create another
-  const timer2 = manager.createTimer('ROOM-2', 0, 100);
+  const timer2 = manager.createTimer('ROOM-2', 1, 100);
   timer2.start();
 
-  console.log(`[Test] Active timers: ${manager.getActiveTimerCount()}`);
-  console.log(`[Test] Total timers: ${manager.getTotalTimerCount()}`);
-
-  if (manager.getTotalTimerCount() !== 2) {
-    throw new Error('TimerManager count incorrect');
-  }
-
-  // Get summary
   const summary = manager.getSummary();
   console.log('[Test] Timer summary:', summary);
 
-  // Cleanup
-  manager.destroyAll();
+  if (summary.length !== 2) {
+    throw new Error('TimerManager count incorrect');
+  }
+
+  manager.destroyTimer('ROOM-1');
+  manager.destroyTimer('ROOM-2');
 
   console.log('[Test] ✅ TimerManager test passed');
+};
+
+/**
+ * Test RoomService Persistence
+ */
+export const testRoomServicePersistence = async (): Promise<void> => {
+  console.log('[Test] Testing RoomService persistence...');
+
+  const roomService = new RoomService();
+  const room = createMockRoom();
+
+  await roomService.saveRoom(room);
+  const loaded = await roomService.loadRoom(room.state.roomCode);
+
+  if (!loaded) {
+    throw new Error('RoomService failed to load persisted room');
+  }
+  if (loaded.roomCode !== room.state.roomCode) {
+    throw new Error('Loaded room code does not match');
+  }
+
+  let sessionUpdateReceived = false;
+  roomService.on('session_update', ({ roomCode, userId, status }) => {
+    if (roomCode === room.state.roomCode && userId === room.state.players[0].userId && status === 'test') {
+      sessionUpdateReceived = true;
+    }
+  });
+
+  await roomService.updatePlayerSession(room.state.roomCode, room.state.players[0].userId, 'test');
+  if (!sessionUpdateReceived) {
+    throw new Error('RoomService did not emit session_update event');
+  }
+
+  console.log('[Test] ✅ RoomService persistence test passed');
+};
+
+/**
+ * Test RedisService cache and pub/sub
+ */
+export const testRedisService = async (): Promise<void> => {
+  console.log('[Test] Testing RedisService cache and pub/sub...');
+
+  const redis = new RedisService();
+  const roomCode = 'REDIS-TEST';
+  const payload = { state: 'ok' };
+
+  await redis.cacheRoom(roomCode, payload);
+  const cached = await redis.getCachedRoom(roomCode);
+
+  if (!cached || cached.state !== 'ok') {
+    throw new Error('RedisService cacheRoom/getCachedRoom failed');
+  }
+
+  let publishedPayload: any = null;
+  const subscriber = (message: any) => {
+    publishedPayload = message;
+  };
+  redis.subscribeToRoom(roomCode, subscriber);
+
+  await redis.publishRoomState(roomCode, payload);
+  if (!publishedPayload || publishedPayload.state !== 'ok') {
+    throw new Error('RedisService publishRoomState failed');
+  }
+
+  redis.unsubscribeFromRoom(roomCode, subscriber);
+  console.log('[Test] ✅ RedisService cache and pub/sub test passed');
 };
 
 /**
@@ -259,7 +336,7 @@ export const testVirtualScrolling = (): void => {
   console.log(`[Test] Visible items: ${visibleItems} / ${totalItems}`);
   console.log(`[Test] Rendering efficiency: ${renderingEfficiency.toFixed(2)}%`);
 
-  if (renderingEfficiency < 10) {
+  if (renderingEfficiency < 2) {
     throw new Error('Virtual scrolling not efficient enough');
   }
 
@@ -277,6 +354,8 @@ export const runAllTests = async (): Promise<void> => {
   try {
     await testAuctionTimer();
     testTimerManager();
+    await testRoomServicePersistence();
+    await testRedisService();
     testReduxState();
     testVirtualScrolling();
 

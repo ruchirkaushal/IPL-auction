@@ -2,10 +2,12 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { useVideoManager } from './useVideoManager';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { auctionActions } from '../store/auctionSlice';
+import { playersActions } from '../store/playersSlice';
 import type {
   RoomState,
   TeamId,
-  Player,
   BidPlacedPayload,
   BidRejectedPayload,
   PlayerSoldPayload,
@@ -19,17 +21,18 @@ const VITE_SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV 
 type TimerTickListener = (ticks: number) => void;
 
 export const useSocket = () => {
+  const dispatch = useAppDispatch();
+  const roomState = useAppSelector((state) => state.auction.roomState);
+  const allPlayers = useAppSelector((state) => state.players.allPlayers);
+  const myTeamId = useAppSelector((state) => state.auction.myTeamId);
+  const lastBid = useAppSelector((state) => state.auction.lastBid);
+  const lastBidRejected = useAppSelector((state) => state.auction.lastBidRejected);
+  const lastSold = useAppSelector((state) => state.auction.lastSold);
+  const lastUnsold = useAppSelector((state) => state.auction.lastUnsold);
+  const lastAdvancing = useAppSelector((state) => state.auction.lastAdvancing);
+  const isConnected = useAppSelector((state) => state.auction.isConnected);
+  const socketError = useAppSelector((state) => state.auction.socketError);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  const [myTeamId, setMyTeamId] = useState<TeamId | null>(null);
-  const [lastBid, setLastBid] = useState<BidPlacedPayload | null>(null);
-  const [lastBidRejected, setLastBidRejected] = useState<BidRejectedPayload | null>(null);
-  const [lastSold, setLastSold] = useState<PlayerSoldPayload | null>(null);
-  const [lastUnsold, setLastUnsold] = useState<PlayerUnsoldPayload | null>(null);
-  const [lastAdvancing, setLastAdvancing] = useState<PlayerAdvancingPayload | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [socketError, setSocketError] = useState<string | null>(null);
 
   const videoManager = useVideoManager();
   const videoManagerRef = useRef(videoManager);
@@ -42,6 +45,12 @@ export const useSocket = () => {
   useEffect(() => {
     roomStateRef.current = roomState;
   }, [roomState]);
+
+  useEffect(() => {
+    if (!roomState || !socket) return;
+    const me = roomState.players.find((player) => player.socketId === socket.id) ?? null;
+    dispatch(auctionActions.setMyTeamId(me?.teamId ?? null));
+  }, [roomState, socket, dispatch]);
 
   const subscribeTimerTicks = useCallback((listener: TimerTickListener) => {
     timerListenersRef.current.add(listener);
@@ -71,7 +80,7 @@ export const useSocket = () => {
 
     fetch(`${VITE_SERVER_URL}/api/players`)
       .then(res => res.json())
-      .then(data => setAllPlayers(data))
+      .then(data => dispatch(playersActions.setAllPlayers(data)))
       .catch(err => console.error('Failed to fetch players:', err));
 
     const newSocket = io(VITE_SERVER_URL, {
@@ -87,8 +96,8 @@ export const useSocket = () => {
     newSocket.on('connect', () => {
       console.log(`[Socket] connected ${newSocket.id}`);
       lastServerActivityAtRef.current = Date.now();
-      setIsConnected(true);
-      setSocketError(null);
+      dispatch(auctionActions.setSocketConnected(true));
+      dispatch(auctionActions.setSocketError(null));
       const match = window.location.pathname.match(/\/(lobby|auction|summary)\/([^/]+)/);
       if (match) {
         const roomCode = match[2];
@@ -99,7 +108,7 @@ export const useSocket = () => {
           localStorage.setItem('ipl_auction_user_id', userId);
         }
         if (roomCode && (!playerName || !userId)) {
-          setSocketError('Session expired or missing player data. Returning to home.');
+          dispatch(auctionActions.setSocketError('Session expired or missing player data. Returning to home.'));
           return;
         }
         if (roomCode && playerName && userId) {
@@ -114,18 +123,18 @@ export const useSocket = () => {
         message: disconnectDetails?.message,
         description: disconnectDetails?.description,
       });
-      setIsConnected(false);
+      dispatch(auctionActions.setSocketConnected(false));
     });
     newSocket.on('connect_error', (error: Error) => {
-      setSocketError(error.message || 'Socket connection failed.');
+      dispatch(auctionActions.setSocketError(error.message || 'Socket connection failed.'));
       console.error('Socket connect error:', error);
     });
     newSocket.on('connect_timeout', () => {
-      setSocketError('Socket connection timed out.');
+      dispatch(auctionActions.setSocketError('Socket connection timed out.'));
       console.error('Socket connection timed out');
     });
     newSocket.on('reconnect_failed', () => {
-      setSocketError('Socket reconnect failed.');
+      dispatch(auctionActions.setSocketError('Socket reconnect failed.'));
       console.error('Socket reconnect failed');
     });
     newSocket.io.on('reconnect_attempt', (attempt) => {
@@ -137,16 +146,16 @@ export const useSocket = () => {
 
     newSocket.on('room_state_update', (state: RoomState) => {
       lastServerActivityAtRef.current = Date.now();
-      setSocketError(null);
+      dispatch(auctionActions.setSocketError(null));
       roomStateRef.current = state;
-      setRoomState(state);
+      dispatch(auctionActions.setRoomState(state));
       const currentPlayerId = state.auction.auctionQueue[state.auction.currentPlayerIndex] ?? null;
       console.log(
         `[RoomState ${state.roomCode}] phase=${state.auction.phase} idx=${state.auction.currentPlayerIndex}/${state.auction.auctionQueue.length} paused=${state.auction.isPaused} ticks=${state.auction.ticks} current=${currentPlayerId ?? 'none'}`
       );
       const me = state.players.find(p => p.socketId === newSocket.id);
       if (me) {
-        setMyTeamId(me.teamId);
+        dispatch(auctionActions.setMyTeamId(me.teamId));
         localStorage.setItem('ipl_auction_room_code', state.roomCode);
         localStorage.setItem('playerName', me.name);
         if (me.teamId) {
@@ -166,6 +175,7 @@ export const useSocket = () => {
 
     newSocket.on('timer_update', (payload: TimerUpdatePayload) => {
       lastServerActivityAtRef.current = Date.now();
+      dispatch(auctionActions.setTimerTicks(payload.ticks));
       videoManagerRef.current.updateTimerTicks(payload.ticks);
       timerListenersRef.current.forEach((listener) => {
         try {
@@ -191,7 +201,7 @@ export const useSocket = () => {
 
     newSocket.on('bid_placed', (payload: BidPlacedPayload) => {
       lastServerActivityAtRef.current = Date.now();
-      setLastBid(payload);
+      dispatch(auctionActions.setLastBid(payload));
       const phase = videoManagerRef.current.getVideoPhase();
       if (
         phase !== 'OUTRO_PLAYING' &&
@@ -202,7 +212,7 @@ export const useSocket = () => {
     });
 
     newSocket.on('bid_rejected', (payload: BidRejectedPayload) => {
-      setLastBidRejected(payload);
+      dispatch(auctionActions.setLastBidRejected(payload));
     });
 
     // ─── KEY CHANGE ───────────────────────────────────────────────────────
@@ -214,19 +224,19 @@ export const useSocket = () => {
     // ─────────────────────────────────────────────────────────────────────
     newSocket.on('player_sold', (payload: PlayerSoldPayload) => {
       lastServerActivityAtRef.current = Date.now();
-      setLastSold(payload);
+      dispatch(auctionActions.setLastSold(payload));
       // DO NOT call enterWaitingEnd() here
     });
 
     newSocket.on('player_unsold', (payload: PlayerUnsoldPayload) => {
       lastServerActivityAtRef.current = Date.now();
-      setLastUnsold(payload);
+      dispatch(auctionActions.setLastUnsold(payload));
       // DO NOT call enterWaitingEnd() here
     });
 
     newSocket.on('player_advancing', (payload: PlayerAdvancingPayload) => {
       lastServerActivityAtRef.current = Date.now();
-      setLastAdvancing(payload);
+      dispatch(auctionActions.setLastAdvancing(payload));
     });
 
     newSocket.on('ai_bid_incoming', (_payload: { teamId: TeamId }) => {
@@ -236,16 +246,16 @@ export const useSocket = () => {
     newSocket.on('auction_complete', (state: RoomState) => {
       lastServerActivityAtRef.current = Date.now();
       roomStateRef.current = state;
-      setRoomState(state);
+      dispatch(auctionActions.setRoomState(state));
     });
 
     newSocket.on('room_unavailable', (payload: RoomUnavailablePayload) => {
       console.error('[Socket] room_unavailable', payload);
-      setRoomState(null);
+      dispatch(auctionActions.setRoomState(null));
       roomStateRef.current = null;
-      setSocketError(
+      dispatch(auctionActions.setSocketError(
         payload.message || 'Auction room is unavailable on server. Please rejoin from lobby.'
-      );
+      ));
     });
 
     newSocket.on('kicked', () => {
@@ -261,16 +271,11 @@ export const useSocket = () => {
     });
 
     newSocket.on('room_reset', () => {
-      setMyTeamId(null);
-      setLastBid(null);
-      setLastBidRejected(null);
-      setLastSold(null);
-      setLastUnsold(null);
-      setLastAdvancing(null);
+      dispatch(auctionActions.clearTransientRoomState());
     });
 
     newSocket.on('error', (payload: { message: string }) => {
-      setSocketError(payload.message);
+      dispatch(auctionActions.setSocketError(payload.message));
       console.error('Socket error:', payload.message);
     });
 
