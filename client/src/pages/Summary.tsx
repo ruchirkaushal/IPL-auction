@@ -125,7 +125,7 @@ Total Spent: ${formatAuctionMoney(spent)} | Purse Remaining: ${formatAuctionMone
   }
 
   return (
-    <div className="min-h-screen md:h-screen bg-[#050505] text-white font-sans md:overflow-hidden selection:bg-emerald-500/30 flex flex-col md:flex-row">
+    <div className="h-screen bg-[#050505] text-white font-sans overflow-hidden selection:bg-emerald-500/30 flex flex-row">
       {/* Main Content */}
       <div className="flex-grow overflow-y-auto p-5 md:p-8 custom-scrollbar md:max-h-screen">
         <div className="max-w-7xl mx-auto">
@@ -325,7 +325,7 @@ Total Spent: ${formatAuctionMoney(spent)} | Purse Remaining: ${formatAuctionMone
       </div>
       
       {/* Chat Panel Sidebar */}
-      <div className="w-full md:w-80 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 bg-[#0a0a0a] h-[500px] md:h-screen">
+      <div className="w-[35%] md:w-80 flex-shrink-0 border-l border-white/5 bg-[#0a0a0a] h-screen">
         {roomCode && <ChatPanel roomCode={roomCode} showSystemMessages={false} />}
       </div>
     </div>

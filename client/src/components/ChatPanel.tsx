@@ -202,20 +202,20 @@ export default function ChatPanel({ roomCode, showSystemMessages = true }: ChatP
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-[#080808] flex items-center gap-2">
+      <form onSubmit={handleSendMessage} className="p-2 md:p-4 border-t border-white/5 bg-[#080808] flex items-center gap-2">
         <input 
           type="text" 
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Message draft room..."
-          className="flex-grow bg-white/5 border border-white/10 hover:border-white/15 focus:border-[#00e5ff] rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#00e5ff] transition-all"
+          className="flex-grow bg-white/5 border border-white/10 hover:border-white/15 focus:border-[#00e5ff] rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-[16px] md:text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#00e5ff] transition-all"
         />
         <button 
           type="submit"
           disabled={!inputText.trim()}
-          className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:hover:bg-blue-600 text-white rounded-xl transition-all shadow-lg"
+          className="p-2 md:p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:hover:bg-blue-600 text-white rounded-xl transition-all shadow-lg shrink-0"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </button>

@@ -161,8 +161,8 @@ export default function TeamPanel({ teams, allPlayers, roomPlayers }: TeamPanelP
                                   key={player.id} 
                                   className="flex items-center justify-between py-1 px-1.5 rounded-lg hover:bg-white/5 transition-colors"
                                 >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                                  <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+                                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
                                       <img 
                                         src={player.image || player.photoUrl} 
                                         alt={player.name} 
@@ -173,8 +173,8 @@ export default function TeamPanel({ teams, allPlayers, roomPlayers }: TeamPanelP
                                         }}
                                       />
                                     </div>
-                                    <span className="text-xs text-white font-medium truncate">{player.name}</span>
-                                    {player.isOverseas && <span className="text-[10px] opacity-70 flex-shrink-0" title={player.country}>✈️</span>}
+                                    <span className="text-[10px] md:text-xs text-white font-medium leading-tight whitespace-normal break-words">{player.name}</span>
+                                    {player.isOverseas && <span className="text-[9px] md:text-[10px] opacity-70 flex-shrink-0" title={player.country}>✈️</span>}
                                   </div>
                                   <span className="text-xs font-bold text-[#F5A623] font-outfit ml-2">
                                     {formatAuctionMoney(player.price)}

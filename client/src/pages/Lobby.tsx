@@ -99,46 +99,46 @@ export default function Lobby() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
+        <div className="grid grid-cols-12 gap-2 md:gap-4 flex-1 min-h-0">
           
           {/* Players Panel */}
-          <div className="col-span-3 glass rounded-[2rem] border-white/5 overflow-hidden flex flex-col p-4">
-            <div className="flex justify-between items-center mb-4">
-               <h3 className="text-base font-black tracking-tight">Managers <span className="text-gray-500 ml-1">({roomState.players.length}/10)</span></h3>
-               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+          <div className="col-span-3 md:col-span-3 glass rounded-2xl md:rounded-[2rem] border-white/5 overflow-hidden flex flex-col p-2 md:p-4">
+            <div className="flex justify-between items-center mb-2 md:mb-4">
+               <h3 className="text-xs md:text-base font-black tracking-tight">Managers <span className="text-gray-500 ml-1">({roomState.players.length}/10)</span></h3>
+               <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
             </div>
             
-            <div className="space-y-2.5 flex-grow overflow-y-auto custom-scrollbar">
+            <div className="space-y-1.5 md:space-y-2.5 flex-grow overflow-y-auto custom-scrollbar">
               {roomState.players.map(p => (
-                <div key={p.socketId} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group transition-all hover:bg-white/[0.08]">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black p-1 bg-white/5 ${p.teamId ? 'border border-white/10' : 'text-white/20 border border-dashed border-white/20'}`}>
+                <div key={p.socketId} className="flex items-center gap-2 md:gap-4 p-2 md:p-4 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 group transition-all hover:bg-white/[0.08]">
+                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-sm md:text-lg font-black p-1 bg-white/5 ${p.teamId ? 'border border-white/10' : 'text-white/20 border border-dashed border-white/20'}`}>
                     {p.teamId ? (
                       <img src={TEAMS[p.teamId].logoUrl} alt={p.teamId} className="w-[85%] h-[85%] object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
                     ) : (
                       p.name[0].toUpperCase()
                     )}
                   </div>
-                  <div className="flex-grow">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm">{p.name}</p>
-                      {p.isHost && <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-blue-500/30">Host</span>}
+                  <div className="flex-grow min-w-0">
+                    <div className="flex items-center gap-1 md:gap-2">
+                      <p className="font-bold text-[10px] md:text-sm truncate">{p.name}</p>
+                      {p.isHost && <span className="text-[6px] md:text-[8px] font-black bg-blue-500/20 text-blue-400 px-1 md:px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-blue-500/30">Host</span>}
                     </div>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-0.5">
+                    <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mt-0.5 truncate">
                       {p.teamId ? TEAMS[p.teamId].name : 'Choosing...'}
                     </p>
                   </div>
                   {isHost && p.socketId !== socket?.id && (
                     <button
                       onClick={() => roomCode && kickPlayer(roomCode, p.socketId)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-500/25 rounded-xl text-red-400 hover:text-red-300 flex items-center justify-center"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 md:p-1.5 hover:bg-red-500/25 rounded-lg md:rounded-xl text-red-400 hover:text-red-300 flex items-center justify-center"
                       title="Kick Player"
                     >
-                      <span className="material-symbols-outlined text-lg">person_remove</span>
+                      <span className="material-symbols-outlined text-sm md:text-lg">person_remove</span>
                     </button>
                   )}
                   {p.isReady && (
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                       <span className="material-symbols-outlined text-emerald-400 text-xs font-bold">check</span>
+                    <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                       <span className="material-symbols-outlined text-emerald-400 text-[10px] md:text-xs font-bold">check</span>
                     </div>
                   )}
                 </div>
@@ -146,15 +146,15 @@ export default function Lobby() {
             </div>
 
             {isHost && (
-              <div className="mt-4">
+              <div className="mt-2 md:mt-4">
                 <button 
                   onClick={() => roomCode && startAuction(roomCode)}
                   disabled={!allReady}
-                  className="w-full relative overflow-hidden bg-white text-black font-black text-sm py-3.5 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:-translate-y-1 transition-all duration-300 disabled:opacity-20 disabled:hover:translate-y-0 active:scale-95 group"
+                  className="w-full relative overflow-hidden bg-white text-black font-black text-[10px] md:text-sm py-2.5 md:py-3.5 rounded-lg md:rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:-translate-y-1 transition-all duration-300 disabled:opacity-20 disabled:hover:translate-y-0 active:scale-95 group"
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
+                  <span className="relative z-10 flex items-center justify-center gap-1.5 md:gap-2">
                     INITIALIZE AUCTION
-                    <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+                    <span className="material-symbols-outlined text-sm md:text-[20px]">rocket_launch</span>
                   </span>
                   <div className="absolute inset-0 bg-blue-500 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 </button>
@@ -163,7 +163,7 @@ export default function Lobby() {
           </div>
 
           {/* Teams Selection Panel */}
-          <div className="col-span-6 glass rounded-[2rem] border-white/5 overflow-y-auto custom-scrollbar p-4 flex flex-col">
+          <div className="col-span-5 md:col-span-6 glass rounded-2xl md:rounded-[2rem] border-white/5 overflow-y-auto custom-scrollbar p-2 md:p-4 flex flex-col">
             <div className="mb-4">
                <h3 className="text-base font-black tracking-tight">Select Franchise</h3>
                <p className="text-[10px] text-gray-500 mt-0.5 font-medium tracking-wide">Each manager must lead a unique IPL franchise.</p>
@@ -211,7 +211,7 @@ export default function Lobby() {
           </div>
 
           {/* Chat Panel */}
-          <div className="col-span-3 rounded-[2rem] border border-white/5 overflow-hidden flex flex-col bg-[#0a0a0a]">
+          <div className="col-span-4 md:col-span-3 rounded-2xl md:rounded-[2rem] border border-white/5 overflow-hidden flex flex-col bg-[#0a0a0a]">
             {roomCode && <ChatPanel roomCode={roomCode} showSystemMessages={false} />}
           </div>
 
