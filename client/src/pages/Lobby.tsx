@@ -128,7 +128,7 @@ export default function Lobby() {
             </div>
 
             {/* Desktop Detailed Player List */}
-            <div className="hidden md:flex space-y-2.5 flex-grow overflow-y-auto custom-scrollbar">
+            <div className="hidden md:flex md:flex-col space-y-2.5 flex-grow overflow-y-auto custom-scrollbar">
               {roomState.players.map(p => (
                 <div key={p.socketId} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group transition-all hover:bg-white/[0.08]">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black p-1 bg-white/5 ${p.teamId ? 'border border-white/10' : 'text-white/20 border border-dashed border-white/20'}`}>

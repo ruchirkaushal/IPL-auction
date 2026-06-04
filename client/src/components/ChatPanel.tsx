@@ -208,7 +208,7 @@ export default function ChatPanel({ roomCode, showSystemMessages = true }: ChatP
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Message draft room..."
-          className="flex-grow bg-white/5 border border-white/10 hover:border-white/15 focus:border-[#00e5ff] rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-[16px] md:text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#00e5ff] transition-all"
+          className="flex-grow bg-white/5 border border-white/10 hover:border-white/15 focus:border-[#00e5ff] rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-[16px] text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#00e5ff] transition-all"
         />
         <button 
           type="submit"
