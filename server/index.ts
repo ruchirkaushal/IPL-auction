@@ -14,6 +14,7 @@
  */
 
 import express from 'express';
+import path from 'path';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
@@ -64,6 +65,17 @@ import { INITIAL_PURSE_LAKHS } from '../shared/auctionConfig';
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {
+    return next();
+  }
+  res.sendFile(path.join(clientDistPath, 'index.html'), err => {
+    if (err) next(err);
+  });
+});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
