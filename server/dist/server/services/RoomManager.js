@@ -116,7 +116,7 @@ const makeInitialRoomState = (roomCode, hostSocketId, hostUserId, hostName) => {
     return {
         roomCode,
         hostId: hostSocketId,
-        players: [{ socketId: hostSocketId, userId: hostUserId, name: hostName, teamId: null, isHost: true, isReady: false }],
+        players: [{ socketId: hostSocketId, userId: hostUserId, name: hostName, teamId: null, isHost: true, isReady: false, presenceStatus: 'active' }],
         teams: initialTeams,
         auction: {
             isStarted: false,
@@ -209,6 +209,7 @@ const makeHandleLeaveRoom = (io, emitState) => {
                 const player = room.state.players[playerIndex];
                 if (isDisconnect) {
                     player.socketId = '';
+                    player.presenceStatus = 'left';
                     emitState(roomCode);
                     const key = (0, exports.getReconnectKey)(roomCode, player);
                     const oldTimeout = exports.reconnectTimeouts.get(key);

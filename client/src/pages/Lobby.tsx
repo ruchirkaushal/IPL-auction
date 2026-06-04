@@ -4,11 +4,15 @@ import { useSocketContext } from '../SocketContext';
 import { TEAMS, ALL_TEAM_IDS } from '../constants/teams';
 import type { TeamId } from '../types';
 import toast from 'react-hot-toast';
+import ChatPanel from '../components/ChatPanel';
+import useDeviceDetect from '../hooks/useDeviceDetect';
+import RotateDeviceOverlay from '../components/RotateDeviceOverlay';
 
 export default function Lobby() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
   const { roomState, myTeamId, selectTeam, startAuction, kickPlayer, socket, socketError } = useSocketContext();
+  const { isPhone, isPortrait } = useDeviceDetect();
 
   useEffect(() => {
     if (roomState?.auction.isStarted && roomCode) {
@@ -57,6 +61,10 @@ export default function Lobby() {
   const isHost = me?.isHost;
   const allReady = roomState.players.every(p => p.isReady);
 
+  if (isPhone && isPortrait) {
+    return <RotateDeviceOverlay />;
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans overflow-y-auto selection:bg-blue-500/30">
       <div className="max-w-7xl mx-auto">
@@ -91,10 +99,10 @@ export default function Lobby() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
           
           {/* Players Panel */}
-          <div className="lg:col-span-4 glass rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col p-8">
+          <div className="lg:col-span-3 glass rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col p-6">
             <div className="flex justify-between items-center mb-8">
                <h3 className="text-xl font-black tracking-tight">Managers <span className="text-gray-500 ml-2">({roomState.players.length}/10)</span></h3>
                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
@@ -158,13 +166,13 @@ export default function Lobby() {
           </div>
 
           {/* Teams Selection Panel */}
-          <div className="lg:col-span-8 glass rounded-[2.5rem] border-white/5 overflow-hidden p-8 flex flex-col">
+          <div className="lg:col-span-6 glass rounded-[2.5rem] border-white/5 overflow-y-auto custom-scrollbar p-6 flex flex-col">
             <div className="mb-8">
                <h3 className="text-xl font-black tracking-tight">Select Franchise</h3>
                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide">Each manager must lead a unique IPL franchise.</p>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {ALL_TEAM_IDS.map((teamId: TeamId) => {
                 const team = TEAMS[teamId];
                 const teamState = roomState.teams[teamId];
@@ -203,6 +211,11 @@ export default function Lobby() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Chat Panel */}
+          <div className="lg:col-span-3 rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col h-full bg-[#0a0a0a]">
+            {roomCode && <ChatPanel roomCode={roomCode} />}
           </div>
 
         </div>

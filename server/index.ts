@@ -317,7 +317,6 @@ io.on('connection', (socket: Socket) => {
         room.state.teams[teamId].status = 'idle';
       });
       room.state.players = room.state.players.map(p => ({ ...p, teamId: null, isReady: false }));
-      room.state.chat = [];
       io.to(roomCode).emit('room_reset');
       emit(roomCode);
     } catch (err) { console.error(`[DIAGNOSTICS: ERROR] socket.on(reset_room) failed:`, err); }

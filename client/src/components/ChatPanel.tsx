@@ -162,7 +162,7 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
                   <span className="text-[9px] font-black text-gray-400 tracking-wide uppercase">
                     {msg.sender}
                   </span>
-                  {senderTeam && (
+                  {senderTeam ? (
                     <span 
                       className="text-[8px] font-black uppercase px-1 rounded-sm tracking-widest select-none shrink-0" 
                       style={{ 
@@ -172,6 +172,12 @@ export default function ChatPanel({ roomCode }: ChatPanelProps) {
                       }}
                     >
                       {senderTeam.shortName}
+                    </span>
+                  ) : (
+                    <span 
+                      className="text-[8px] font-black uppercase px-1 rounded-sm tracking-widest select-none shrink-0 bg-purple-500/20 text-purple-400 border border-purple-500/30" 
+                    >
+                      SPECTATOR
                     </span>
                   )}
                 </div>

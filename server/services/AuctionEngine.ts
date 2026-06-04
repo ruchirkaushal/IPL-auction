@@ -68,7 +68,7 @@ export const addChatMessage = (room: Room, msg: Omit<ChatMessage, 'id' | 'timest
     timestamp: Date.now()
   };
   room.state.chat.push(newMsg);
-  if (room.state.chat.length > 100) room.state.chat.shift();
+  if (room.state.chat.length > 500) room.state.chat.shift();
 };
 
 // ---------------------------------------------------------------------------

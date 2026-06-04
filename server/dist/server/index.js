@@ -136,6 +136,7 @@ io.on('connection', (socket) => {
                 const oldPlayer = room.state.players[existingPlayerIndex];
                 console.log(`[Room] Player ${playerName} rejoining room ${roomCode} (was offline)`);
                 oldPlayer.socketId = socket.id;
+                oldPlayer.presenceStatus = 'active';
                 if (oldPlayer.teamId) {
                     room.state.teams[oldPlayer.teamId].ownerId = socket.id;
                     room.state.teams[oldPlayer.teamId].ownerName = oldPlayer.name;
@@ -147,7 +148,7 @@ io.on('connection', (socket) => {
             }
             else {
                 console.log(`[Room] New player ${playerName} joined room ${roomCode}`);
-                room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false });
+                room.state.players.push({ socketId: socket.id, userId, name: playerName, teamId: null, isHost: room.state.players.length === 0, isReady: false, presenceStatus: 'active' });
                 if (room.state.players.length === 1)
                     room.state.hostId = socket.id;
             }
@@ -295,7 +296,6 @@ io.on('connection', (socket) => {
                 room.state.teams[teamId].status = 'idle';
             });
             room.state.players = room.state.players.map(p => ({ ...p, teamId: null, isReady: false }));
-            room.state.chat = [];
             io.to(roomCode).emit('room_reset');
             emit(roomCode);
         }
@@ -399,6 +399,22 @@ io.on('connection', (socket) => {
         }
         catch (err) {
             console.error(`[DIAGNOSTICS: ERROR] socket.on(kick_player) failed:`, err);
+        }
+    });
+    // -- visibility_change (AFK tracking) --
+    socket.on('visibility_change', ({ roomCode, hidden }) => {
+        try {
+            const room = RoomManager_1.rooms.get(roomCode);
+            if (!room)
+                return;
+            const player = room.state.players.find(p => p.socketId === socket.id);
+            if (!player)
+                return;
+            player.presenceStatus = hidden ? 'afk' : 'active';
+            emit(roomCode);
+        }
+        catch (err) {
+            console.error(`[DIAGNOSTICS: ERROR] socket.on(visibility_change) failed:`, err);
         }
     });
     // -- disconnect --

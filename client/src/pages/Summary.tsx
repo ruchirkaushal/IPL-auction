@@ -6,12 +6,16 @@ import toast from 'react-hot-toast';
 import { INITIAL_PURSE_LAKHS, MAX_OVERSEAS_PLAYERS, MAX_SQUAD_SIZE } from '../../../shared/auctionConfig';
 import { formatAuctionMoney } from '../../../shared/auctionPricing';
 import { TEAMS } from '../constants/teams';
+import ChatPanel from '../components/ChatPanel';
+import useDeviceDetect from '../hooks/useDeviceDetect';
+import RotateDeviceOverlay from '../components/RotateDeviceOverlay';
 
 export default function Summary() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
   const { roomState, resetRoom, socket, allPlayers, socketError } = useSocketContext();
   const [copiedTeam, setCopiedTeam] = useState<string | null>(null);
+  const { isPhone, isPortrait } = useDeviceDetect();
 
   useEffect(() => {
     if (!socket) return;
@@ -116,9 +120,15 @@ Total Spent: ${formatAuctionMoney(spent)} | Purse Remaining: ${formatAuctionMone
 
   const isHost = roomState.hostId === socket?.id;
 
+  if (isPhone && isPortrait) {
+    return <RotateDeviceOverlay />;
+  }
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans overflow-y-auto selection:bg-emerald-500/30">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen lg:h-screen bg-[#050505] text-white font-sans overflow-hidden selection:bg-emerald-500/30 flex flex-col lg:flex-row">
+      {/* Main Content */}
+      <div className="flex-grow overflow-y-auto p-6 md:p-12 custom-scrollbar lg:max-h-screen">
+        <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -311,6 +321,12 @@ Total Spent: ${formatAuctionMoney(spent)} | Purse Remaining: ${formatAuctionMone
             );
           })}
         </div>
+      </div>
+      </div>
+      
+      {/* Chat Panel Sidebar */}
+      <div className="w-full lg:w-96 xl:w-[450px] flex-shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 bg-[#0a0a0a] h-[600px] lg:h-screen">
+        {roomCode && <ChatPanel roomCode={roomCode} />}
       </div>
     </div>
   );
