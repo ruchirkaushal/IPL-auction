@@ -108,7 +108,7 @@ export const useSocket = () => {
           localStorage.setItem('ipl_auction_user_id', userId);
         }
         if (roomCode && (!playerName || !userId)) {
-          dispatch(auctionActions.setSocketError('Session expired or missing player data. Returning to home.'));
+          window.location.href = `/?roomCode=${roomCode}`;
           return;
         }
         if (roomCode && playerName && userId) {
