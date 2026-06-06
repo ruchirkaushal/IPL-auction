@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ipl-auction-client-beta.vercel.app/sitemap.xml
