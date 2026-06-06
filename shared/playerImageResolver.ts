@@ -34,11 +34,8 @@ export const MANUAL_OVERRIDES: Record<string, string> = {
   'unsold-1': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/214.png', // David Warner
   'unsold-10': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/1426.png', // Rilee Rossouw
   'unsold-11': 'https://media.crictracker.com/media/featureimage/2018/07/James-Vince.jpg', // James Vince
-  'unsold-17': 'https://www.iplt20.com/players/evin-lewis/872', // Evin Lewis
-  'unsold-23': 'https://www.iplt20.com/players/rassie-van-der-dussen/20619', // Rassie Van Der Dussen
   'unsold-51': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/820.png', // Sikandar Raza
   'unsold-52': 'https://images.dream11.com/eyJrZXkiOiJmYy1wbGF5ZXItaW1hZ2VzLzg0MjIucG5nIiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwicG9zaXRpb24iOiJ0b3AiLCJ3aWR0aCI6MjAwLCJoZWlnaHQiOjIwMH0sIndlYnAiOnsicXVhbGl0eSI6NjAsImxvc3NsZXNzIjpmYWxzZX19LCJvdXRwdXRGb3JtYXQiOiJ3ZWJwIn0=', // Will Young
-  'unsold-30': 'https://www.iplt20.com/players/sam-billings/2756', // Sam Billings
   'unsold-47': 'https://documents.iplt20.com/ipl/IPLHeadshot2024/268.png', // Shai Hope
   'unsold-61': 'https://documents.iplt20.com/playerheadshot/ipl/210/3882.png', // Alex Carey
   'unsold-16': 'https://documents.iplt20.com/playerheadshot/ipl/210/3309.png', // Tabraiz Shamsi
@@ -55,18 +52,6 @@ export const MANUAL_OVERRIDES: Record<string, string> = {
   'unsold-77': 'https://documents.iplt20.com/ipl/IPLHeadshot2026/347.png', // Keshav Maharaj
   
   // Generic Fallbacks for missing/logo URLs
-  'unsold-9': DEFAULT_FALLBACK_IMAGE,  // Ben Duckett
-  'unsold-94': DEFAULT_FALLBACK_IMAGE, // Litton Das
-  'unsold-96': DEFAULT_FALLBACK_IMAGE, // Ollie Pope
-  'unsold-33': DEFAULT_FALLBACK_IMAGE, // Tom Latham
-  'unsold-19': DEFAULT_FALLBACK_IMAGE, // Gus Atkinson
-  'unsold-24': DEFAULT_FALLBACK_IMAGE, // Sean Abbott
-  'unsold-42': DEFAULT_FALLBACK_IMAGE, // Daniel Worrall
-  'unsold-43': DEFAULT_FALLBACK_IMAGE, // Matthew Potts
-  'unsold-45': DEFAULT_FALLBACK_IMAGE, // John Turner
-  'unsold-55': DEFAULT_FALLBACK_IMAGE, // Ashton Agar
-  'unsold-73': DEFAULT_FALLBACK_IMAGE, // Wayne Parnell
-  'kkr-18': DEFAULT_FALLBACK_IMAGE,    // Shivam Shukla
 
   // New Players (scraped from IPL profile pages)
   'dc-20':      'https://documents.iplt20.com/ipl/IPLHeadshot2026/1462.png', // Mukesh Kumar

@@ -43,7 +43,9 @@ const auctionConfig_1 = require("../shared/auctionConfig");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-const clientDistPath = path_1.default.resolve(__dirname, '../../../client/dist');
+const clientDistPath = __dirname.includes(path_1.default.join('dist', 'server')) || __dirname.includes('dist/server')
+    ? path_1.default.resolve(__dirname, '../../../client/dist')
+    : path_1.default.resolve(__dirname, '../client/dist');
 app.use(express_1.default.static(clientDistPath));
 app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {
