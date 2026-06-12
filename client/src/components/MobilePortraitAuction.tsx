@@ -142,13 +142,13 @@ export const MobilePortraitAuction: React.FC<MobilePortraitAuctionProps> = ({
       {isHost && (
         <div className="flex gap-2 bg-gray-900 px-3 py-2 rounded flex-shrink-0">
           <button
-            onClick={() => actions.togglePause()}
+            onClick={() => actions.togglePause(roomCode || '')}
             className="flex-1 py-1 text-xs font-semibold bg-yellow-600 hover:bg-yellow-700 rounded"
           >
             {roomState.auction.isPaused ? 'Resume' : 'Pause'}
           </button>
           <button
-            onClick={() => actions.endAuction()}
+            onClick={() => actions.endAuction(roomCode || '')}
             className="flex-1 py-1 text-xs font-semibold bg-red-600 hover:bg-red-700 rounded"
           >
             End

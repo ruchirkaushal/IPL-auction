@@ -189,8 +189,8 @@ export default function DesktopAuctionLayout({
 
         {/* Pause Screen Overlay */}
         {roomState.auction.isPaused && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
-            <div className="text-center max-w-md px-6 select-none">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-[9999] pointer-events-auto flex flex-col items-center justify-center animate-in fade-in duration-300">
+            <div className="text-center max-w-md px-6 select-none relative z-[10000]">
               <div className="w-20 h-20 mx-auto mb-6 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.2)] animate-pulse">
                 <span className="material-symbols-outlined text-red-500 text-[40px]">pause</span>
               </div>

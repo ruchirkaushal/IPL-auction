@@ -192,8 +192,8 @@ export default function MobileLandscapeAuction({
 
         {/* Pause Overlay */}
         {roomState.auction.isPaused && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="text-center w-full max-w-[200px] px-2">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center">
+            <div className="text-center w-full max-w-[200px] px-2 relative z-[10000]">
               <h1 className="text-lg font-black tracking-tight text-white uppercase mb-2">
                 Paused
               </h1>
